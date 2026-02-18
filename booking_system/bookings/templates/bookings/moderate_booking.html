@@ -1,0 +1,201 @@
+{% extends 'bookings/base.html' %}
+{% load static %}
+
+{% block title %}Модерация заявки{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'bookings:index' %}">Главная</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'bookings:moderator_dashboard' %}">Панель модератора</a></li>
+                <li class="breadcrumb-item active">Модерация заявки #{{ booking.id }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-warning">
+                <h4 class="mb-0">
+                    <i class="bi bi-shield-check"></i> 
+                    Модерация заявки: {{ booking.title }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Информация о заявке:</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>ID:</th>
+                                <td>{{ booking.id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Название:</th>
+                                <td>{{ booking.title }}</td>
+                            </tr>
+                            <tr>
+                                <th>Описание:</th>
+                                <td>{{ booking.description|linebreaks }}</td>
+                            </tr>
+                            <tr>
+                                <th>Заявитель:</th>
+                                <td>{{ booking.requester.get_full_name|default:booking.requester.username }}</td>
+                            </tr>
+                            <tr>
+                                <th>Email:</th>
+                                <td>{{ booking.requester.email }}</td>
+                            </tr>
+                            <tr>
+                                <th>Телефон:</th>
+                                <td>{{ booking.requester.phone|default:"Не указан" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Детали бронирования:</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Зал:</th>
+                                <td>{{ booking.room.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Вместимость зала:</th>
+                                <td>{{ booking.room.capacity }} чел.</td>
+                            </tr>
+                            <tr>
+                                <th>Начало:</th>
+                                <td>{{ booking.start_time|date:"d.m.Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Окончание:</th>
+                                <td>{{ booking.end_time|date:"d.m.Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Длительность:</th>
+                                <td>{{ booking.duration }}</td>
+                            </tr>
+                            <tr>
+                                <th>Участников:</th>
+                                <td>{{ booking.participants_count }} чел.</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                {% if conflicts %}
+                    <div class="alert alert-danger">
+                        <h5><i class="bi bi-exclamation-triangle"></i> Обнаружены конфликты!</h5>
+                        <p>Следующие бронирования пересекаются с данной заявкой:</p>
+                        <ul>
+                            {% for conflict in conflicts %}
+                                <li>
+                                    <strong>{{ conflict.title }}</strong> - 
+                                    {{ conflict.start_time|date:"d.m.Y H:i" }} - {{ conflict.end_time|date:"d.m.Y H:i" }}
+                                    ({{ conflict.requester.username }})
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <hr>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.action.label }}</label>
+                        <div class="btn-group w-100" role="group">
+                            {% for radio in form.action %}
+                                <div class="form-check form-check-inline me-3">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label {% if radio.data.value == 'approve' %}text-success{% else %}text-danger{% endif %}" 
+                                           for="{{ radio.id_for_label }}">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.action.errors %}
+                            <div class="text-danger">{{ form.action.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.comment.id_for_label }}" class="form-label">
+                            {{ form.comment.label }}
+                        </label>
+                        {{ form.comment }}
+                        {% if form.comment.help_text %}
+                            <div class="form-text">{{ form.comment.help_text }}</div>
+                        {% endif %}
+                        {% if form.comment.errors %}
+                            <div class="text-danger">{{ form.comment.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'bookings:moderator_dashboard' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Назад
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Применить решение
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle"></i> 
+                    Информация о зале
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>{{ booking.room.name }}</h6>
+                <p class="small">{{ booking.room.description|truncatewords:30 }}</p>
+                
+                <ul class="list-unstyled">
+                    <li><i class="bi bi-people"></i> Вместимость: {{ booking.room.capacity }} чел.</li>
+                    <li><i class="bi bi-geo-alt"></i> {{ booking.room.location }}</li>
+                    {% if booking.room.has_projector %}
+                        <li><i class="bi bi-projector"></i> Проектор</li>
+                    {% endif %}
+                    {% if booking.room.has_video_conference %}
+                        <li><i class="bi bi-camera-video"></i> Видеоконференция</li>
+                    {% endif %}
+                    {% if booking.room.has_whiteboard %}
+                        <li><i class="bi bi-pencil-square"></i> Магнитная доска</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history"></i> 
+                    Правила модерации
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="small">
+                    <li>Проверьте, не конфликтует ли заявка с другими бронированиями</li>
+                    <li>Убедитесь, что время бронирования в рабочее время (7:00-16:30)</li>
+                    <li>Количество участников не должно превышать вместимость зала</li>
+                    <li>При отклонении обязательно укажите причину</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'bookings/base.html' %}
+{% load static %}
+
+{% block title %}Отмена бронирования{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-warning">
+                <h4 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    Подтверждение отмены
+                </h4>
+            </div>
+            <div class="card-body">
+                <p>Вы уверены, что хотите отменить бронирование <strong>"{{ booking.title }}"</strong>?</p>
+                
+                <div class="alert alert-info">
+                    <h6>Детали бронирования:</h6>
+                    <ul class="mb-0">
+                        <li><strong>Зал:</strong> {{ booking.room.name }}</li>
+                        <li><strong>Дата:</strong> {{ booking.start_time|date:"d.m.Y" }}</li>
+                        <li><strong>Время:</strong> {{ booking.start_time|date:"H:i" }} - {{ booking.end_time|date:"H:i" }}</li>
+                    </ul>
+                </div>
+
+                {% if booking.status == 'approved' %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Внимание!</strong> Это подтвержденное бронирование. 
+                        Отмена возможна не менее чем за 2 часа до начала.
+                    </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'bookings:booking_detail' booking.id %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Назад
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-x-circle"></i> Подтвердить отмену
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,299 @@
+{% extends 'bookings/base.html' %}
+{% load static %}
+
+{% block title %}Панель модератора{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="bi bi-shield-check"></i> 
+                Панель модератора
+            </h1>
+        </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-warning mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-hourglass-split"></i> 
+                        Ожидают
+                    </h5>
+                    <h2 class="card-text">{{ stats.total_pending }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-check-circle"></i> 
+                        Подтверждено сегодня
+                    </h5>
+                    <h2 class="card-text">{{ stats.total_approved_today }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-building"></i> 
+                        Конференц-залов
+                    </h5>
+                    <h2 class="card-text">{{ stats.total_rooms }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-people"></i> 
+                        Пользователей
+                    </h5>
+                    <h2 class="card-text">{{ stats.total_users }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Заявки ожидающие подтверждения -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">
+                        <i class="bi bi-hourglass-split"></i> 
+                        Заявки, ожидающие подтверждения
+                        <span class="badge bg-light text-dark ms-2">{{ pending_bookings.count }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if pending_bookings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Название</th>
+                                        <th>Заявитель</th>
+                                        <th>Зал</th>
+                                        <th>Начало</th>
+                                        <th>Окончание</th>
+                                        <th>Участников</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for booking in pending_bookings %}
+                                    <tr>
+                                        <td>{{ booking.id }}</td>
+                                        <td>{{ booking.title }}</td>
+                                        <td>{{ booking.requester.get_full_name|default:booking.requester.username }}</td>
+                                        <td>{{ booking.room.name }}</td>
+                                        <td>{{ booking.start_time|date:"d.m.Y H:i" }}</td>
+                                        <td>{{ booking.end_time|date:"d.m.Y H:i" }}</td>
+                                        <td>{{ booking.participants_count }}</td>
+                                        <td>
+                                            <a href="{% url 'bookings:moderate_booking' booking.id %}" 
+                                               class="btn btn-sm btn-primary">
+                                                <i class="bi bi-shield-check"></i> 
+                                                Модерировать
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">Нет заявок, ожидающих подтверждения</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ближайшие подтвержденные бронирования -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-check"></i> 
+                        Ближайшие подтвержденные бронирования
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_bookings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Название</th>
+                                        <th>Заявитель</th>
+                                        <th>Зал</th>
+                                        <th>Начало</th>
+                                        <th>Окончание</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for booking in upcoming_bookings %}
+                                    <tr>
+                                        <td>{{ booking.title }}</td>
+                                        <td>{{ booking.requester.get_full_name|default:booking.requester.username }}</td>
+                                        <td>{{ booking.room.name }}</td>
+                                        <td>{{ booking.start_time|date:"d.m.Y H:i" }}</td>
+                                        <td>{{ booking.end_time|date:"d.m.Y H:i" }}</td>
+                                        <td>
+                                            <a href="{% url 'bookings:booking_detail' booking.id %}" 
+                                               class="btn btn-sm btn-info">
+                                                <i class="bi bi-eye"></i> 
+                                                Детали
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">Нет ближайших бронирований</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Недавние пользователи -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people"></i> 
+                        Недавние пользователи
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_users %}
+                        <div class="list-group">
+                            {% for user in recent_users %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0">{{ user.get_full_name|default:user.username }}</h6>
+                                            <small class="text-muted">
+                                                <i class="bi bi-envelope"></i> {{ user.email }}<br>
+                                                <i class="bi bi-person-badge"></i> {{ user.get_role_display }}
+                                            </small>
+                                        </div>
+                                        <span class="badge {% if user.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ user.is_active|yesno:"Активен,Неактивен" }}
+                                        </span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">Нет пользователей</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Недавно отклоненные заявки -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-x-circle"></i> 
+                        Недавно отклоненные заявки
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if rejected_bookings %}
+                        <div class="list-group">
+                            {% for booking in rejected_bookings %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0">{{ booking.title }}</h6>
+                                            <small class="text-muted">
+                                                <i class="bi bi-person"></i> {{ booking.requester.username }}<br>
+                                                <i class="bi bi-building"></i> {{ booking.room.name }}
+                                            </small>
+                                            {% if booking.moderation_comment %}
+                                                <p class="mb-0 small text-danger mt-1">
+                                                    <i class="bi bi-chat"></i> {{ booking.moderation_comment }}
+                                                </p>
+                                            {% endif %}
+                                        </div>
+                                        <small class="text-muted">
+                                            {{ booking.start_time|date:"d.m.Y" }}
+                                        </small>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">Нет отклоненных заявок</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Быстрые действия -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning"></i> 
+                        Быстрые действия
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{% url 'bookings:room_management' %}" 
+                               class="btn btn-outline-primary w-100 mb-2">
+                                <i class="bi bi-building"></i> 
+                                Управление залами
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'bookings:create_room' %}" 
+                               class="btn btn-outline-success w-100 mb-2">
+                                <i class="bi bi-plus-circle"></i> 
+                                Добавить зал
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'bookings:user_management' %}" 
+                               class="btn btn-outline-info w-100 mb-2">
+                                <i class="bi bi-people"></i> 
+                                Управление пользователями
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'admin:index' %}" 
+                               class="btn btn-outline-danger w-100 mb-2">
+                                <i class="bi bi-gear"></i> 
+                                Админ-панель
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

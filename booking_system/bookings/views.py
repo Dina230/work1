@@ -1,6 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q, Count
@@ -8,7 +7,6 @@ from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 from datetime import datetime, timedelta, date
 import csv
-import json
 from .models import Booking, ConferenceRoom, User, BookingHistory
 from .forms import (
     BookingForm, ModerationForm, RoomForm, UserRegistrationForm,
@@ -16,6 +14,8 @@ from .forms import (
 )
 from .decorators import moderator_required, requester_required, employee_required, any_role_required
 
+
+# ==================== АУТЕНТИФИКАЦИЯ ====================
 
 def login_view(request):
     """Страница входа"""
@@ -27,25 +27,28 @@ def login_view(request):
         if form.is_valid():
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
+
             user = authenticate(request, username=username, password=password)
 
             if user is not None:
-                login(request, user)
-                messages.success(request, f"Добро пожаловать, {user.get_full_name() or user.username}!")
+                if user.is_active:
+                    login(request, user)
+                    messages.success(request, f"Добро пожаловать, {user.get_full_name() or user.username}!")
 
-                if not user.is_active:
-                    messages.warning(request, "Ваш аккаунт деактивирован. Обратитесь к администратору.")
-                    logout(request)
-                    return redirect('bookings:login')
-
-                if user.role == 'moderator':
-                    return redirect('bookings:moderator_dashboard')
-                elif user.role == 'requester':
-                    return redirect('bookings:my_bookings')
+                    if user.role == 'moderator':
+                        return redirect('bookings:moderator_dashboard')
+                    elif user.role == 'requester':
+                        return redirect('bookings:my_bookings')
+                    else:
+                        return redirect('bookings:schedule')
                 else:
-                    return redirect('bookings:schedule')
+                    messages.error(request, "Ваш аккаунт деактивирован. Обратитесь к администратору.")
             else:
                 messages.error(request, "Неверное имя пользователя или пароль")
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, error)
     else:
         form = LoginForm()
 
@@ -67,21 +70,28 @@ def register_view(request):
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, "Регистрация прошла успешно! Добро пожаловать!")
+            try:
+                user = form.save()
+                login(request, user)
+                messages.success(request, "Регистрация прошла успешно! Добро пожаловать!")
 
-            if user.role == 'requester':
-                return redirect('bookings:create_booking')
-            else:
-                return redirect('bookings:schedule')
+                if user.role == 'requester':
+                    return redirect('bookings:create_booking')
+                else:
+                    return redirect('bookings:schedule')
+            except Exception as e:
+                messages.error(request, f"Ошибка при регистрации: {str(e)}")
         else:
-            messages.error(request, "Пожалуйста, исправьте ошибки в форме")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, error)
     else:
         form = UserRegistrationForm()
 
     return render(request, 'bookings/register.html', {'form': form})
 
+
+# ==================== ОБЩИЕ СТРАНИЦЫ ====================
 
 @any_role_required
 def index(request):
@@ -117,6 +127,74 @@ def index(request):
 
     return render(request, 'bookings/index.html', context)
 
+
+@any_role_required
+def booking_detail(request, booking_id):
+    """Детальная информация о бронировании"""
+    booking = get_object_or_404(Booking, id=booking_id)
+
+    if request.user.role != 'moderator' and booking.requester != request.user:
+        messages.error(request, "У вас нет прав для просмотра этого бронирования")
+        return redirect('bookings:index')
+
+    history = booking.history.all()[:10]
+
+    return render(request, 'bookings/booking_detail.html', {
+        'booking': booking,
+        'history': history,
+        'now': timezone.now(),
+    })
+
+
+@any_role_required
+def check_availability(request):
+    """API для проверки доступности зала"""
+    if request.method == 'GET':
+        room_id = request.GET.get('room_id')
+        start_time = request.GET.get('start_time')
+        end_time = request.GET.get('end_time')
+
+        if not all([room_id, start_time, end_time]):
+            return JsonResponse({'error': 'Missing parameters'}, status=400)
+
+        try:
+            room = ConferenceRoom.objects.get(id=room_id, is_active=True)
+            start = datetime.fromisoformat(start_time)
+            end = datetime.fromisoformat(end_time)
+
+            time_valid = True
+            time_message = ""
+
+            if start.hour < 7:
+                time_valid = False
+                time_message = "Бронирование возможно только с 7:00"
+            elif end.hour > 16 or (end.hour == 16 and end.minute > 30):
+                time_valid = False
+                time_message = "Бронирование возможно только до 16:30"
+
+            conflicting = Booking.objects.filter(
+                room=room,
+                status__in=['pending', 'approved'],
+                start_time__lt=end,
+                end_time__gt=start
+            ).exists()
+
+            return JsonResponse({
+                'available': not conflicting and time_valid,
+                'time_valid': time_valid,
+                'time_message': time_message,
+                'conflicting': conflicting,
+                'room_name': room.name,
+                'capacity': room.capacity
+            })
+
+        except (ConferenceRoom.DoesNotExist, ValueError) as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+# ==================== ДЛЯ ЗАЯВИТЕЛЯ ====================
 
 @requester_required
 def create_booking(request):
@@ -213,31 +291,17 @@ def my_bookings(request):
     })
 
 
-@any_role_required
-def booking_detail(request, booking_id):
-    """Детальная информация о бронировании"""
-    booking = get_object_or_404(Booking, id=booking_id)
-
-    if request.user.role != 'moderator' and booking.requester != request.user:
-        messages.error(request, "У вас нет прав для просмотра этого бронирования")
-        return redirect('bookings:index')
-
-    history = booking.history.all()[:10]
-
-    return render(request, 'bookings/booking_detail.html', {
-        'booking': booking,
-        'history': history,
-        'now': timezone.now(),
-    })
-
-
 @requester_required
 def cancel_booking(request, booking_id):
     """Отмена бронирования"""
     booking = get_object_or_404(Booking, id=booking_id, requester=request.user)
 
-    if not booking.can_cancel():
+    if booking.status not in ['pending', 'approved']:
         messages.error(request, "Это бронирование нельзя отменить")
+        return redirect('bookings:booking_detail', booking_id=booking.id)
+
+    if booking.status == 'approved' and booking.start_time < timezone.now() + timedelta(hours=2):
+        messages.error(request, "Нельзя отменить бронирование менее чем за 2 часа до начала")
         return redirect('bookings:booking_detail', booking_id=booking.id)
 
     if request.method == 'POST':
@@ -257,6 +321,8 @@ def cancel_booking(request, booking_id):
 
     return render(request, 'bookings/cancel_booking.html', {'booking': booking})
 
+
+# ==================== ДЛЯ МОДЕРАТОРА ====================
 
 @moderator_required
 def moderator_dashboard(request):
@@ -490,6 +556,31 @@ def user_management(request):
 
 
 @moderator_required
+def create_user(request):
+    """Создание нового пользователя модератором"""
+    if request.method == 'POST':
+        form = UserRegistrationForm(request.POST)
+        if form.is_valid():
+            try:
+                user = form.save()
+                messages.success(request, f"Пользователь {user.username} успешно создан")
+                return redirect('bookings:user_management')
+            except Exception as e:
+                messages.error(request, f"Ошибка при создании пользователя: {str(e)}")
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, error)
+    else:
+        form = UserRegistrationForm()
+
+    return render(request, 'bookings/user_create.html', {
+        'form': form,
+        'title': 'Создание нового пользователя'
+    })
+
+
+@moderator_required
 def edit_user(request, user_id):
     """Редактирование пользователя"""
     user = get_object_or_404(User, id=user_id)
@@ -535,6 +626,8 @@ def toggle_user_active(request, user_id):
     return redirect('bookings:user_management')
 
 
+# ==================== ДЛЯ СОТРУДНИКА ====================
+
 @employee_required
 def schedule(request):
     """Просмотр расписания с учетом рабочего времени 7:00 - 16:30"""
@@ -563,9 +656,8 @@ def schedule(request):
 
     rooms = ConferenceRoom.objects.filter(is_active=True)
 
-    # Создание временной шкалы с 7:00 до 17:00 (чтобы показать до 16:30)
     timeline = []
-    for hour in range(7, 17):  # С 7:00 до 17:00
+    for hour in range(7, 17):
         timeline.append({
             'hour': f"{hour:02d}:00",
             'bookings': []
@@ -675,64 +767,3 @@ def export_schedule(request):
         ])
 
     return response
-
-
-@any_role_required
-def check_availability(request):
-    """API для проверки доступности зала"""
-    if request.method == 'GET':
-        room_id = request.GET.get('room_id')
-        start_time = request.GET.get('start_time')
-        end_time = request.GET.get('end_time')
-
-        if not all([room_id, start_time, end_time]):
-            return JsonResponse({'error': 'Missing parameters'}, status=400)
-
-        try:
-            room = ConferenceRoom.objects.get(id=room_id, is_active=True)
-            start = datetime.fromisoformat(start_time)
-            end = datetime.fromisoformat(end_time)
-
-            # Проверка рабочего времени
-            start_hour = start.hour
-            start_minute = start.minute
-            end_hour = end.hour
-            end_minute = end.minute
-
-            time_valid = True
-            time_message = ""
-
-            if start_hour < 7 or (start_hour == 7 and start_minute < 0):
-                time_valid = False
-                time_message = "Бронирование возможно только с 7:00"
-            elif end_hour > 16 or (end_hour == 16 and end_minute > 30):
-                time_valid = False
-                time_message = "Бронирование возможно только до 16:30"
-            elif end_hour < start_hour:
-                time_valid = False
-                time_message = "Время окончания не может быть раньше времени начала"
-            elif start >= end:
-                time_valid = False
-                time_message = "Время окончания должно быть позже времени начала"
-
-            conflicting = Booking.objects.filter(
-                room=room,
-                status__in=['pending', 'approved'],
-                start_time__lt=end,
-                end_time__gt=start
-            ).exists()
-
-            return JsonResponse({
-                'available': not conflicting and time_valid,
-                'time_valid': time_valid,
-                'time_message': time_message,
-                'conflicting': conflicting,
-                'room_name': room.name,
-                'capacity': room.capacity,
-                'start_time': start.isoformat(),
-                'end_time': end.isoformat(),
-            })
-        except (ConferenceRoom.DoesNotExist, ValueError) as e:
-            return JsonResponse({'error': str(e)}, status=400)
-
-    return JsonResponse({'error': 'Method not allowed'}, status=405)

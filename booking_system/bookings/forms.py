@@ -1,42 +1,82 @@
 from django import forms
-from django.utils import timezone
-from django.conf import settings
-from django.contrib.auth.forms import AuthenticationForm
-from .models import Booking, ConferenceRoom, User
-from datetime import timedelta, datetime
+from django.contrib.auth import authenticate
+from .models import User, Booking, ConferenceRoom
 
-
-class LoginForm(AuthenticationForm):
+class LoginForm(forms.Form):
     """Форма входа"""
     username = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Имя пользователя'})
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите имя пользователя'
+        })
     )
     password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Пароль'})
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите пароль'
+        })
     )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        username = cleaned_data.get('username')
+        password = cleaned_data.get('password')
+
+        if username and password:
+            user = authenticate(username=username, password=password)
+            if not user:
+                raise forms.ValidationError("Неверное имя пользователя или пароль")
+            if not user.is_active:
+                raise forms.ValidationError("Пользователь деактивирован")
+        return cleaned_data
 
 
 class UserRegistrationForm(forms.ModelForm):
     """Форма регистрации пользователя"""
     password = forms.CharField(
         label='Пароль',
-        widget=forms.PasswordInput(attrs={'class': 'form-control'})
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите пароль'
+        })
     )
     password_confirm = forms.CharField(
         label='Подтверждение пароля',
-        widget=forms.PasswordInput(attrs={'class': 'form-control'})
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Подтвердите пароль'
+        })
     )
 
     class Meta:
         model = User
         fields = ['username', 'email', 'first_name', 'last_name', 'phone', 'department', 'role']
         widgets = {
-            'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Придумайте имя пользователя'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'your@email.com'}),
-            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Имя'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Фамилия'}),
-            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+7 (999) 123-45-67'}),
-            'department': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Отдел'}),
+            'username': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Придумайте имя пользователя'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'your@email.com'
+            }),
+            'first_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Введите имя'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Введите фамилию'
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '+7 (999) 123-45-67'
+            }),
+            'department': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Введите отдел'
+            }),
             'role': forms.Select(attrs={'class': 'form-control'}),
         }
         labels = {
@@ -54,14 +94,26 @@ class UserRegistrationForm(forms.ModelForm):
         password = cleaned_data.get('password')
         password_confirm = cleaned_data.get('password_confirm')
 
+        # Проверка совпадения паролей
         if password and password_confirm and password != password_confirm:
             raise forms.ValidationError("Пароли не совпадают")
+
+        # Проверка уникальности username
+        username = cleaned_data.get('username')
+        if username and User.objects.filter(username=username).exists():
+            raise forms.ValidationError("Пользователь с таким именем уже существует")
+
+        # Проверка уникальности email
+        email = cleaned_data.get('email')
+        if email and User.objects.filter(email=email).exists():
+            raise forms.ValidationError("Пользователь с таким email уже существует")
 
         return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)
         user.set_password(self.cleaned_data['password'])
+        user.is_active = True  # Активируем пользователя сразу
         if commit:
             user.save()
         return user
@@ -69,7 +121,6 @@ class UserRegistrationForm(forms.ModelForm):
 
 class UserEditForm(forms.ModelForm):
     """Форма редактирования пользователя"""
-
     class Meta:
         model = User
         fields = ['username', 'email', 'first_name', 'last_name', 'phone', 'department', 'role', 'is_active']
@@ -86,25 +137,32 @@ class UserEditForm(forms.ModelForm):
 
 
 class BookingForm(forms.ModelForm):
-    """Форма создания бронирования с проверкой рабочего времени 7:00 - 16:30"""
-
+    """Форма создания бронирования"""
     class Meta:
         model = Booking
         fields = ['room', 'title', 'description', 'start_time', 'end_time', 'participants_count']
         widgets = {
             'start_time': forms.DateTimeInput(attrs={
                 'type': 'datetime-local',
-                'class': 'form-control',
-                'min': timezone.now().strftime('%Y-%m-%dT%H:%M')
+                'class': 'form-control'
             }),
             'end_time': forms.DateTimeInput(attrs={
                 'type': 'datetime-local',
-                'class': 'form-control',
-                'min': timezone.now().strftime('%Y-%m-%dT%H:%M')
+                'class': 'form-control'
             }),
-            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
-            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название мероприятия'}),
-            'participants_count': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'description': forms.Textarea(attrs={
+                'rows': 4,
+                'class': 'form-control',
+                'placeholder': 'Опишите мероприятие'
+            }),
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Название мероприятия'
+            }),
+            'participants_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1
+            }),
             'room': forms.Select(attrs={'class': 'form-control'}),
         }
         labels = {
@@ -127,40 +185,16 @@ class BookingForm(forms.ModelForm):
         room = cleaned_data.get('room')
 
         if start_time and end_time:
-            # Проверка, что время начала меньше времени окончания
             if start_time >= end_time:
                 raise forms.ValidationError("Время окончания должно быть позже времени начала")
 
-            # Проверка, что бронирование не в прошлом
-            if start_time < timezone.now():
-                raise forms.ValidationError("Нельзя создать бронирование в прошлом")
-
-            # Проверка минимальной длительности (30 минут)
-            if (end_time - start_time).total_seconds() < 1800:
-                raise forms.ValidationError("Минимальная длительность бронирования - 30 минут")
-
-            # Проверка максимальной длительности (8 часов)
-            if (end_time - start_time).total_seconds() > 28800:
-                raise forms.ValidationError("Максимальная длительность бронирования - 8 часов")
-
-            # Проверка рабочего времени (с 7:00 до 16:30)
-            start_hour = start_time.hour
-            start_minute = start_time.minute
-            end_hour = end_time.hour
-            end_minute = end_time.minute
-
-            # Проверка начала рабочего дня
-            if start_hour < 7 or (start_hour == 7 and start_minute < 0):
+            # Проверка рабочего времени (7:00 - 16:30)
+            if start_time.hour < 7:
                 raise forms.ValidationError("Бронирование возможно только с 7:00")
-
-            # Проверка окончания рабочего дня
-            if end_hour > 16 or (end_hour == 16 and end_minute > 30):
+            if end_time.hour > 16 or (end_time.hour == 16 and end_time.minute > 30):
                 raise forms.ValidationError("Бронирование возможно только до 16:30")
 
-            if end_hour < start_hour:
-                raise forms.ValidationError("Время окончания не может быть раньше времени начала")
-
-            # Проверка на пересечение с другими бронированиями
+            # Проверка на конфликты
             if room:
                 conflicting = Booking.objects.filter(
                     room=room,
@@ -186,7 +220,11 @@ class ModerationForm(forms.Form):
         label="Действие"
     )
     comment = forms.CharField(
-        widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        widget=forms.Textarea(attrs={
+            'rows': 3,
+            'class': 'form-control',
+            'placeholder': 'Введите комментарий...'
+        }),
         required=False,
         label="Комментарий",
         help_text="Укажите причину при отклонении заявки"
@@ -195,19 +233,42 @@ class ModerationForm(forms.Form):
 
 class RoomForm(forms.ModelForm):
     """Форма для создания/редактирования конференц-зала"""
-
     class Meta:
         model = ConferenceRoom
         fields = ['name', 'capacity', 'location', 'description', 'has_projector',
-                  'has_video_conference', 'has_whiteboard', 'is_active', 'image']
+                 'has_video_conference', 'has_whiteboard', 'is_active', 'image']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'capacity': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
-            'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Этаж, номер кабинета'}),
-            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Название зала'
+            }),
+            'capacity': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1
+            }),
+            'location': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Этаж, номер кабинета'
+            }),
+            'description': forms.Textarea(attrs={
+                'rows': 4,
+                'class': 'form-control',
+                'placeholder': 'Описание зала'
+            }),
             'has_projector': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'has_video_conference': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'has_whiteboard': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'name': 'Название',
+            'capacity': 'Вместимость (человек)',
+            'location': 'Местоположение',
+            'description': 'Описание',
+            'has_projector': 'Проектор',
+            'has_video_conference': 'Видеоконференцсвязь',
+            'has_whiteboard': 'Магнитно-маркерная доска',
+            'is_active': 'Зал активен',
+            'image': 'Изображение',
         }

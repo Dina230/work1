@@ -1,0 +1,149 @@
+{% extends 'bookings/base.html' %}
+{% load static %}
+
+{% block title %}Мои заявки{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-list-check"></i> 
+            Мои заявки на бронирование
+        </h1>
+    </div>
+</div>
+
+<!-- Статистика -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Всего</h5>
+                <h2>{{ stats.total }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Ожидают</h5>
+                <h2>{{ stats.pending }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Подтверждено</h5>
+                <h2>{{ stats.approved }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Отклонено</h5>
+                <h2>{{ stats.rejected }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Фильтры -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Статус</label>
+                        <select name="status" class="form-select">
+                            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Все</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Ожидают</option>
+                            <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Подтверждены</option>
+                            <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Отклонены</option>
+                            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Отменены</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Дата с</label>
+                        <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Дата по</label>
+                        <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> Применить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Список бронирований -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                {% if bookings %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Название</th>
+                                    <th>Зал</th>
+                                    <th>Дата начала</th>
+                                    <th>Дата окончания</th>
+                                    <th>Участников</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for booking in bookings %}
+                                    <tr>
+                                        <td>{{ booking.id }}</td>
+                                        <td>{{ booking.title }}</td>
+                                        <td>{{ booking.room.name }}</td>
+                                        <td>{{ booking.start_time|date:"d.m.Y H:i" }}</td>
+                                        <td>{{ booking.end_time|date:"d.m.Y H:i" }}</td>
+                                        <td>{{ booking.participants_count }}</td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if booking.status == 'pending' %}bg-warning
+                                                {% elif booking.status == 'approved' %}bg-success
+                                                {% elif booking.status == 'rejected' %}bg-danger
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ booking.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'bookings:booking_detail' booking.id %}" 
+                                               class="btn btn-sm btn-info">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            {% if booking.status == 'pending' %}
+                                                <a href="{% url 'bookings:cancel_booking' booking.id %}" 
+                                                   class="btn btn-sm btn-danger">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">Нет бронирований</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

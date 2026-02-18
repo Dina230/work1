@@ -1,0 +1,49 @@
+{% extends 'bookings/base.html' %}
+{% load static %}
+
+{% block title %}Удаление зала{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    Подтверждение удаления
+                </h4>
+            </div>
+            <div class="card-body">
+                <p>Вы уверены, что хотите удалить конференц-зал <strong>"{{ room.name }}"</strong>?</p>
+                
+                {% if has_future_bookings %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <strong>Внимание!</strong> У этого зала есть будущие бронирования. 
+                        Удаление невозможно.
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-info-circle"></i>
+                        Это действие нельзя отменить. Все данные о зале будут удалены.
+                    </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'bookings:room_management' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Отмена
+                        </a>
+                        {% if not has_future_bookings %}
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Удалить
+                            </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
