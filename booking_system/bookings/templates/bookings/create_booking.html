@@ -1,0 +1,450 @@
+{% extends 'bookings/base.html' %}
+{% load static %}
+
+{% block title %}Создание заявки на бронирование{% endblock %}
+
+{% block extra_css %}
+<style>
+    .working-hours-info {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .working-hours-info i {
+        font-size: 1.2rem;
+        margin-right: 10px;
+    }
+    .time-slot {
+        display: inline-block;
+        padding: 8px 12px;
+        margin: 4px;
+        border: 1px solid #dee2e6;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 0.9rem;
+    }
+    .time-slot.available {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+    }
+    .time-slot.available:hover {
+        background-color: #c3e6cb;
+        transform: translateY(-2px);
+    }
+    .time-slot.unavailable {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+        color: #721c24;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    .time-slot.selected {
+        background-color: #007bff;
+        color: white;
+        border-color: #0056b3;
+    }
+    .time-slot.working-hours {
+        background-color: #fff3cd;
+        border-color: #ffeeba;
+        color: #856404;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-calendar-plus"></i>
+            Создание заявки на бронирование
+        </h2>
+    </div>
+</div>
+
+<!-- Информация о рабочем времени -->
+<div class="row">
+    <div class="col-12">
+        <div class="working-hours-info">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <i class="bi bi-clock-history"></i>
+                    <strong>Режим работы конференц-залов:</strong>
+                    с {{ booking_settings.BOOKING_START_HOUR }}:00 до {{ booking_settings.BOOKING_END_HOUR }}:{{ booking_settings.BOOKING_END_MINUTE }}
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <span class="badge bg-light text-dark p-2">
+                        <i class="bi bi-hourglass-split"></i>
+                        Мин. время: {{ booking_settings.MIN_BOOKING_DURATION }} мин
+                    </span>
+                    <span class="badge bg-light text-dark p-2 ms-2">
+                        <i class="bi bi-hourglass-top"></i>
+                        Макс. время: {{ booking_settings.MAX_BOOKING_DURATION|divisibleby:60 }} ч
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-pencil-square"></i>
+                    Детали бронирования
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="bookingForm" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <i class="bi bi-exclamation-triangle"></i> {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="{{ form.room.id_for_label }}" class="form-label">
+                            <i class="bi bi-building"></i>
+                            Конференц-зал *
+                        </label>
+                        {{ form.room }}
+                        {% if form.room.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.room.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">
+                            <i class="bi bi-card-heading"></i>
+                            Название мероприятия *
+                        </label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.title.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            <i class="bi bi-text-paragraph"></i>
+                            Описание
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.description.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.start_time.id_for_label }}" class="form-label">
+                                <i class="bi bi-clock"></i>
+                                Дата и время начала *
+                            </label>
+                            {{ form.start_time }}
+                            {% if form.start_time.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.start_time.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Доступно с 7:00
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.end_time.id_for_label }}" class="form-label">
+                                <i class="bi bi-clock-history"></i>
+                                Дата и время окончания *
+                            </label>
+                            {{ form.end_time }}
+                            {% if form.end_time.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.end_time.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Не позднее 16:30
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.participants_count.id_for_label }}" class="form-label">
+                            <i class="bi bi-people"></i>
+                            Количество участников *
+                        </label>
+                        {{ form.participants_count }}
+                        {% if form.participants_count.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.participants_count.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Быстрый выбор времени -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="bi bi-clock"></i>
+                            Быстрый выбор времени:
+                        </label>
+                        <div id="quickTimeSlots" class="d-flex flex-wrap">
+                            <!-- Слоты будут добавлены через JavaScript -->
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Важно:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Бронирование возможно только в рабочее время: <strong>с 7:00 до 16:30</strong></li>
+                            <li>Минимальное время бронирования: <strong>{{ booking_settings.MIN_BOOKING_DURATION }} минут</strong></li>
+                            <li>Максимальное время бронирования: <strong>{{ booking_settings.MAX_BOOKING_DURATION|divisibleby:60 }} часов</strong></li>
+                            <li>После отправки заявка будет рассмотрена модератором</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'bookings:index' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i>
+                            Отмена
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i>
+                            Отправить заявку
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Информация о залах -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle"></i>
+                    Информация
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>Правила бронирования:</h6>
+                <ul class="small">
+                    <li>Минимальное время бронирования - {{ booking_settings.MIN_BOOKING_DURATION }} минут</li>
+                    <li>Максимальное время бронирования - {{ booking_settings.MAX_BOOKING_DURATION|divisibleby:60 }} часов</li>
+                    <li><strong class="text-primary">Бронирование возможно с 7:00 до 16:30</strong></li>
+                    <li>Заявка должна быть подана минимум за {{ booking_settings.CANCELLATION_DEADLINE_HOURS }} часа до начала</li>
+                    <li>Максимальный срок бронирования - {{ booking_settings.MAX_ADVANCE_BOOKING_DAYS }} дней вперед</li>
+                </ul>
+
+                <hr>
+
+                <h6>Статусы заявок:</h6>
+                <ul class="small">
+                    <li><span class="badge bg-warning">Ожидает</span> - заявка на рассмотрении</li>
+                    <li><span class="badge bg-success">Подтверждено</span> - бронирование подтверждено</li>
+                    <li><span class="badge bg-danger">Отклонено</span> - заявка отклонена</li>
+                    <li><span class="badge bg-secondary">Отменено</span> - заявка отменена</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Быстрый просмотр залов -->
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-building"></i>
+                    Конференц-залы
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for room in rooms %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">{{ room.name }}</h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-people"></i> {{ room.capacity }} чел. |
+                                        <i class="bi bi-geo-alt"></i> {{ room.location }}
+                                    </small>
+                                </div>
+                                <span class="badge bg-primary">Доступен</span>
+                            </div>
+                            <div class="mt-2">
+                                {% if room.has_projector %}
+                                    <span class="badge bg-light text-dark">
+                                        <i class="bi bi-projector"></i> Проектор
+                                    </span>
+                                {% endif %}
+                                {% if room.has_video_conference %}
+                                    <span class="badge bg-light text-dark">
+                                        <i class="bi bi-camera-video"></i> ВКС
+                                    </span>
+                                {% endif %}
+                                {% if room.has_whiteboard %}
+                                    <span class="badge bg-light text-dark">
+                                        <i class="bi bi-pencil-square"></i> Доска
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const startInput = document.getElementById('{{ form.start_time.id_for_label }}');
+        const endInput = document.getElementById('{{ form.end_time.id_for_label }}');
+        const roomSelect = document.getElementById('{{ form.room.id_for_label }}');
+
+        // Добавление быстрых слотов времени
+        const quickSlots = document.getElementById('quickTimeSlots');
+        const workingHours = [];
+
+        // Создание слотов с 7:00 до 16:00 с шагом 30 минут
+        for (let hour = 7; hour <= 15; hour++) {
+            for (let minute of [0, 30]) {
+                if (hour === 15 && minute === 30) continue; // Пропускаем 15:30, так как нужно успеть до 16:30
+                const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                workingHours.push(timeStr);
+            }
+        }
+
+        // Добавление последнего слота в 16:00
+        workingHours.push('16:00');
+
+        workingHours.forEach(time => {
+            const slot = document.createElement('span');
+            slot.className = 'time-slot available';
+            slot.textContent = time;
+            slot.onclick = function() {
+                if (startInput.value) {
+                    const date = startInput.value.split('T')[0];
+                    startInput.value = `${date}T${time}`;
+
+                    // Автоматически устанавливаем окончание через 1 час
+                    const [hours, minutes] = time.split(':').map(Number);
+                    let endHour = hours + 1;
+                    let endMinute = minutes;
+
+                    if (endHour === 16 && endMinute > 30) {
+                        endHour = 16;
+                        endMinute = 30;
+                    }
+
+                    if (endHour <= 16) {
+                        endInput.value = `${date}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+                    }
+                }
+            };
+            quickSlots.appendChild(slot);
+        });
+
+        // Валидация времени при изменении
+        function validateWorkingHours() {
+            if (startInput.value && endInput.value) {
+                const start = new Date(startInput.value);
+                const end = new Date(endInput.value);
+
+                const startHour = start.getHours();
+                const startMinute = start.getMinutes();
+                const endHour = end.getHours();
+                const endMinute = end.getMinutes();
+
+                let error = '';
+
+                if (startHour < 7) {
+                    error = 'Начало бронирования должно быть не ранее 7:00';
+                } else if (endHour > 16 || (endHour === 16 && endMinute > 30)) {
+                    error = 'Окончание бронирования должно быть не позднее 16:30';
+                } else if (endHour < startHour) {
+                    error = 'Время окончания не может быть раньше времени начала';
+                }
+
+                if (error) {
+                    alert(error);
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        startInput.addEventListener('change', validateWorkingHours);
+        endInput.addEventListener('change', validateWorkingHours);
+
+        // Проверка доступности при выборе зала и времени
+        roomSelect.addEventListener('change', checkAvailability);
+        startInput.addEventListener('change', checkAvailability);
+        endInput.addEventListener('change', checkAvailability);
+
+        function checkAvailability() {
+            if (roomSelect.value && startInput.value && endInput.value) {
+                fetch(`/api/check-availability/?room_id=${roomSelect.value}&start_time=${startInput.value}&end_time=${endInput.value}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.available) {
+                            let message = '';
+                            if (data.conflicting) {
+                                message = 'Это время уже занято';
+                            } else if (!data.time_valid) {
+                                message = data.time_message || 'Некорректное время';
+                            }
+
+                            if (message) {
+                                const alertDiv = document.createElement('div');
+                                alertDiv.className = 'alert alert-warning alert-dismissible fade show mt-2';
+                                alertDiv.innerHTML = `
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    ${message}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                `;
+
+                                const form = document.getElementById('bookingForm');
+                                form.insertBefore(alertDiv, form.firstChild);
+
+                                setTimeout(() => {
+                                    alertDiv.remove();
+                                }, 5000);
+                            }
+                        }
+                    });
+            }
+        }
+    });
+</script>
+{% endblock %}

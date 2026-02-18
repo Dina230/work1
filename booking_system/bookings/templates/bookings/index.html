@@ -1,0 +1,317 @@
+{% extends 'bookings/base.html' %}
+{% load static %}
+
+{% block title %}Главная страница{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-calendar-check"></i> 
+            Система бронирования конференц-залов
+        </h1>
+    </div>
+</div>
+
+{% if user.is_authenticated %}
+    <!-- Дашборд для авторизованных пользователей -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-person-circle"></i> 
+                        Добро пожаловать, {{ user.get_full_name|default:user.username }}!
+                    </h5>
+                    <p class="card-text">
+                        Ваша роль: <span class="badge bg-primary">{{ user.get_role_display }}</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Статистика для разных ролей -->
+    <div class="row mb-4">
+        {% if user.role == 'requester' %}
+            <div class="col-md-4">
+                <div class="card text-white bg-warning mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-hourglass-split"></i> 
+                            Ожидают подтверждения
+                        </h5>
+                        <h2 class="card-text">{{ my_pending_bookings|default:0 }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-success mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-check-circle"></i> 
+                            Подтверждено
+                        </h5>
+                        <h2 class="card-text">{{ my_approved_bookings|default:0 }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-info mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-building"></i> 
+                            Доступно залов
+                        </h5>
+                        <h2 class="card-text">{{ total_rooms }}</h2>
+                    </div>
+                </div>
+            </div>
+
+        {% elif user.role == 'moderator' %}
+            <div class="col-md-3">
+                <div class="card text-white bg-warning mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-hourglass-split"></i> 
+                            Ожидают
+                        </h5>
+                        <h2 class="card-text">{{ pending_bookings_count|default:0 }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-people"></i> 
+                            Пользователей
+                        </h5>
+                        <h2 class="card-text">{{ total_users|default:0 }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-building"></i> 
+                            Конференц-залов
+                        </h5>
+                        <h2 class="card-text">{{ total_rooms }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-primary mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-calendar-check"></i> 
+                            Бронирований сегодня
+                        </h5>
+                        <h2 class="card-text">{{ today_bookings|default:0 }}</h2>
+                    </div>
+                </div>
+            </div>
+
+        {% elif user.role == 'employee' %}
+            <div class="col-md-6">
+                <div class="card text-white bg-info mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-building"></i> 
+                            Конференц-залов
+                        </h5>
+                        <h2 class="card-text">{{ total_rooms }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card text-white bg-success mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-calendar-check"></i> 
+                            Бронирований сегодня
+                        </h5>
+                        <h2 class="card-text">{{ today_bookings|default:0 }}</h2>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endif %}
+
+<!-- Список конференц-залов -->
+<div class="row">
+    <div class="col-12">
+        <h3 class="mb-3">
+            <i class="bi bi-building"></i> 
+            Доступные конференц-залы
+        </h3>
+    </div>
+    
+    {% for room in rooms %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 room-card">
+                {% if room.image %}
+                    <img src="{{ room.image.url }}" class="card-img-top" alt="{{ room.name }}">
+                {% else %}
+                    <div class="card-img-top bg-secondary text-white d-flex align-items-center justify-content-center" 
+                         style="height: 200px;">
+                        <i class="bi bi-building" style="font-size: 4rem;"></i>
+                    </div>
+                {% endif %}
+                
+                <div class="card-body">
+                    <h5 class="card-title">{{ room.name }}</h5>
+                    <p class="card-text">{{ room.description|truncatewords:20 }}</p>
+                    
+                    <ul class="room-features list-unstyled">
+                        <li>
+                            <i class="bi bi-people"></i> 
+                            Вместимость: <strong>{{ room.capacity }} чел.</strong>
+                        </li>
+                        <li>
+                            <i class="bi bi-geo-alt"></i> 
+                            {{ room.location }}
+                        </li>
+                        {% if room.has_projector %}
+                            <li><i class="bi bi-projector"></i> Проектор</li>
+                        {% endif %}
+                        {% if room.has_video_conference %}
+                            <li><i class="bi bi-camera-video"></i> Видеоконференция</li>
+                        {% endif %}
+                        {% if room.has_whiteboard %}
+                            <li><i class="bi bi-pencil-square"></i> Магнитная доска</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                
+                <div class="card-footer bg-white">
+                    {% if user.is_authenticated %}
+                        {% if user.role == 'requester' %}
+                            <a href="{% url 'bookings:create_booking' %}?room={{ room.id }}" 
+                               class="btn btn-primary w-100">
+                                <i class="bi bi-calendar-plus"></i> 
+                                Забронировать
+                            </a>
+                        {% elif user.role == 'employee' %}
+                            <a href="{% url 'bookings:room_schedule' room.id %}" 
+                               class="btn btn-info w-100">
+                                <i class="bi bi-calendar-week"></i> 
+                                Посмотреть расписание
+                            </a>
+                        {% elif user.role == 'moderator' %}
+                            <div class="btn-group w-100">
+                                <a href="{% url 'bookings:edit_room' room.id %}" 
+                                   class="btn btn-warning">
+                                    <i class="bi bi-pencil"></i> 
+                                    Редактировать
+                                </a>
+                                <a href="{% url 'bookings:room_schedule' room.id %}" 
+                                   class="btn btn-info">
+                                    <i class="bi bi-calendar-week"></i> 
+                                    Расписание
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'bookings:login' %}?next={% url 'bookings:create_booking' %}" 
+                           class="btn btn-primary w-100">
+                            <i class="bi bi-box-arrow-in-right"></i> 
+                            Войдите для бронирования
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                Нет доступных конференц-залов.
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Быстрые действия для авторизованных пользователей -->
+{% if user.is_authenticated %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning"></i> 
+                        Быстрые действия
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% if user.role == 'requester' %}
+                            <div class="col-md-4">
+                                <a href="{% url 'bookings:create_booking' %}" 
+                                   class="btn btn-outline-primary w-100 mb-2">
+                                    <i class="bi bi-plus-circle"></i> 
+                                    Новая заявка
+                                </a>
+                            </div>
+                            <div class="col-md-4">
+                                <a href="{% url 'bookings:my_bookings' %}" 
+                                   class="btn btn-outline-success w-100 mb-2">
+                                    <i class="bi bi-list-check"></i> 
+                                    Мои заявки
+                                </a>
+                            </div>
+                        {% elif user.role == 'moderator' %}
+                            <div class="col-md-3">
+                                <a href="{% url 'bookings:moderator_dashboard' %}" 
+                                   class="btn btn-outline-warning w-100 mb-2">
+                                    <i class="bi bi-shield-check"></i> 
+                                    Панель модератора
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a href="{% url 'bookings:room_management' %}" 
+                                   class="btn btn-outline-info w-100 mb-2">
+                                    <i class="bi bi-building"></i> 
+                                    Управление залами
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a href="{% url 'bookings:user_management' %}" 
+                                   class="btn btn-outline-primary w-100 mb-2">
+                                    <i class="bi bi-people"></i> 
+                                    Пользователи
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a href="{% url 'admin:index' %}" 
+                                   class="btn btn-outline-danger w-100 mb-2">
+                                    <i class="bi bi-gear"></i> 
+                                    Админ-панель
+                                </a>
+                            </div>
+                        {% elif user.role == 'employee' %}
+                            <div class="col-md-6">
+                                <a href="{% url 'bookings:schedule' %}" 
+                                   class="btn btn-outline-primary w-100 mb-2">
+                                    <i class="bi bi-calendar-week"></i> 
+                                    Общее расписание
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <a href="{% url 'bookings:schedule' %}?date={{ today|date:'Y-m-d' }}" 
+                                   class="btn btn-outline-success w-100 mb-2">
+                                    <i class="bi bi-calendar-day"></i> 
+                                    Расписание на сегодня
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

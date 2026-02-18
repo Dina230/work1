@@ -1,0 +1,264 @@
+{% extends 'bookings/base.html' %}
+{% load static %}
+
+{% block title %}{{ booking.title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'bookings:index' %}">Главная</a></li>
+                {% if user.role == 'requester' %}
+                    <li class="breadcrumb-item"><a href="{% url 'bookings:my_bookings' %}">Мои заявки</a></li>
+                {% endif %}
+                <li class="breadcrumb-item active">{{ booking.title }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-header {% if booking.status == 'approved' %}bg-success{% elif booking.status == 'pending' %}bg-warning{% elif booking.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %} text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="bi bi-calendar-check"></i>
+                        {{ booking.title }}
+                    </h4>
+                    <span class="badge bg-light text-dark p-2">
+                        Статус: {{ booking.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">
+                            <i class="bi bi-building"></i>
+                            Конференц-зал:
+                        </h6>
+                        <p class="h5">{{ booking.room.name }}</p>
+                        <p class="text-muted">
+                            <i class="bi bi-people"></i> Вместимость: {{ booking.room.capacity }} чел.<br>
+                            <i class="bi bi-geo-alt"></i> {{ booking.room.location }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">
+                            <i class="bi bi-person"></i>
+                            Организатор:
+                        </h6>
+                        <p class="h5">{{ booking.requester.get_full_name|default:booking.requester.username }}</p>
+                        <p class="text-muted">
+                            <i class="bi bi-envelope"></i> {{ booking.requester.email }}<br>
+                            <i class="bi bi-telephone"></i> {{ booking.requester.phone|default:"Не указан" }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">
+                                    <i class="bi bi-clock"></i>
+                                    Начало:
+                                </h6>
+                                <p class="h5">{{ booking.start_time|date:"d.m.Y H:i" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">
+                                    <i class="bi bi-clock-history"></i>
+                                    Окончание:
+                                </h6>
+                                <p class="h5">{{ booking.end_time|date:"d.m.Y H:i" }}</p>
+                                <p class="text-muted small mb-0">
+                                    Длительность: {{ booking.duration }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="text-muted">
+                        <i class="bi bi-text-paragraph"></i>
+                        Описание мероприятия:
+                    </h6>
+                    <div class="p-3 bg-light rounded">
+                        {{ booking.description|linebreaks }}
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="text-muted">
+                        <i class="bi bi-people"></i>
+                        Количество участников:
+                    </h6>
+                    <p class="h5">{{ booking.participants_count }} человек</p>
+                </div>
+
+                {% if booking.moderation_comment %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-chat-dots"></i>
+                        <strong>Комментарий модератора:</strong><br>
+                        {{ booking.moderation_comment }}
+                    </div>
+                {% endif %}
+
+                {% if booking.status == 'pending' and booking.requester == user %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-hourglass-split"></i>
+                        Ваша заявка ожидает рассмотрения модератором. Вы получите уведомление о решении.
+                    </div>
+                {% endif %}
+
+                {% if booking.status == 'approved' %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle"></i>
+                        Бронирование подтверждено. Пожалуйста, не опаздывайте на мероприятие.
+                    </div>
+
+                    <!-- Информация о рабочем времени -->
+                    <div class="alert alert-info">
+                        <i class="bi bi-clock-history"></i>
+                        <strong>Напоминание:</strong> Конференц-залы работают с 7:00 до 16:30.
+                        Убедитесь, что ваше мероприятие укладывается в это время.
+                    </div>
+                {% endif %}
+
+                {% if booking.status == 'rejected' %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle"></i>
+                        Заявка отклонена. При необходимости вы можете создать новую заявку с учетом замечаний.
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if booking.requester == user and booking.status != 'cancelled' %}
+                <div class="card-footer">
+                    {% if booking.status == 'pending' %}
+                        <a href="{% url 'bookings:cancel_booking' booking.id %}"
+                           class="btn btn-danger"
+                           onclick="return confirm('Вы уверены, что хотите отменить заявку?')">
+                            <i class="bi bi-x-circle"></i>
+                            Отменить заявку
+                        </a>
+                    {% elif booking.status == 'approved' %}
+                        {% if booking.start_time > now %}
+                            <a href="{% url 'bookings:cancel_booking' booking.id %}"
+                               class="btn btn-warning"
+                               onclick="return confirm('Вы уверены, что хотите отменить бронирование?')">
+                                <i class="bi bi-x-circle"></i>
+                                Отменить бронирование
+                            </a>
+                        {% endif %}
+                    {% endif %}
+
+                    <a href="{% url 'bookings:create_booking' %}?room={{ booking.room.id }}"
+                       class="btn btn-primary">
+                        <i class="bi bi-calendar-plus"></i>
+                        Создать похожую заявку
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Информация о зале -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-building"></i>
+                    {{ booking.room.name }}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if booking.room.image %}
+                    <img src="{{ booking.room.image.url }}" class="img-fluid rounded mb-3" alt="{{ booking.room.name }}">
+                {% endif %}
+
+                <h6>Оснащение:</h6>
+                <ul class="list-unstyled">
+                    <li>
+                        <i class="bi bi-people"></i>
+                        Вместимость: <strong>{{ booking.room.capacity }} чел.</strong>
+                    </li>
+                    <li>
+                        <i class="bi bi-geo-alt"></i>
+                        {{ booking.room.location }}
+                    </li>
+                    {% if booking.room.has_projector %}
+                        <li><i class="bi bi-projector text-success"></i> Проектор</li>
+                    {% endif %}
+                    {% if booking.room.has_video_conference %}
+                        <li><i class="bi bi-camera-video text-success"></i> Видеоконференция</li>
+                    {% endif %}
+                    {% if booking.room.has_whiteboard %}
+                        <li><i class="bi bi-pencil-square text-success"></i> Магнитная доска</li>
+                    {% endif %}
+                </ul>
+
+                <h6 class="mt-3">Описание:</h6>
+                <p class="small">{{ booking.room.description|default:"Нет описания" }}</p>
+
+                <a href="{% url 'bookings:room_schedule' booking.room.id %}" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-calendar-week"></i>
+                    Расписание зала
+                </a>
+            </div>
+        </div>
+
+        <!-- История изменений -->
+        {% if history %}
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history"></i>
+                        История изменений
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for record in history %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-muted">{{ record.timestamp|date:"d.m.Y H:i" }}</small>
+                                    <span class="badge bg-info">{{ record.get_action_display }}</span>
+                                </div>
+                                <p class="mb-0 small">
+                                    {% if record.action == 'created' %}
+                                        <i class="bi bi-plus-circle"></i>
+                                        Заявка создана пользователем {{ record.user.username }}
+                                    {% elif record.action == 'approve' %}
+                                        <i class="bi bi-check-circle"></i>
+                                        Подтверждено модератором {{ record.user.username }}
+                                    {% elif record.action == 'reject' %}
+                                        <i class="bi bi-x-circle"></i>
+                                        Отклонено модератором {{ record.user.username }}
+                                    {% elif record.action == 'cancelled' %}
+                                        <i class="bi bi-dash-circle"></i>
+                                        Отменено пользователем {{ record.user.username }}
+                                    {% endif %}
+                                </p>
+                                {% if record.details.comment %}
+                                    <p class="mb-0 small text-muted">
+                                        <i class="bi bi-chat"></i> {{ record.details.comment }}
+                                    </p>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
