@@ -12,9 +12,13 @@
         border-radius: 8px;
         margin-bottom: 20px;
     }
-    .working-hours-info i {
-        font-size: 1.2rem;
-        margin-right: 10px;
+    .warning-box {
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
     }
     .time-slot {
         display: inline-block;
@@ -47,10 +51,13 @@
         color: white;
         border-color: #0056b3;
     }
-    .time-slot.working-hours {
-        background-color: #fff3cd;
-        border-color: #ffeeba;
-        color: #856404;
+    .time-slot.past {
+        background-color: #e2e3e5;
+        border-color: #d6d8db;
+        color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.5;
+        text-decoration: line-through;
     }
 </style>
 {% endblock %}
@@ -65,7 +72,7 @@
     </div>
 </div>
 
-<!-- Информация о рабочем времени -->
+<!-- Информация о рабочем времени и предупреждение -->
 <div class="row">
     <div class="col-12">
         <div class="working-hours-info">
@@ -86,6 +93,12 @@
                     </span>
                 </div>
             </div>
+        </div>
+
+        <div class="warning-box">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <strong>Важно!</strong> Нельзя создать бронирование на прошедшую дату.
+            Пожалуйста, выбирайте только будущие даты и время.
         </div>
     </div>
 </div>
@@ -171,7 +184,7 @@
                                 </div>
                             {% endif %}
                             <div class="form-text">
-                                Доступно с 7:00
+                                Доступно с {{ booking_settings.BOOKING_START_HOUR }}:00
                             </div>
                         </div>
 
@@ -189,7 +202,7 @@
                                 </div>
                             {% endif %}
                             <div class="form-text">
-                                Не позднее 16:30
+                                Не позднее {{ booking_settings.BOOKING_END_HOUR }}:{{ booking_settings.BOOKING_END_MINUTE }}
                             </div>
                         </div>
                     </div>
@@ -209,15 +222,19 @@
                         {% endif %}
                     </div>
 
-                    <!-- Быстрый выбор времени -->
+                    <!-- Быстрый выбор времени (только будущие даты) -->
                     <div class="mb-3">
                         <label class="form-label">
                             <i class="bi bi-clock"></i>
-                            Быстрый выбор времени:
+                            Быстрый выбор времени (сегодня):
                         </label>
                         <div id="quickTimeSlots" class="d-flex flex-wrap">
                             <!-- Слоты будут добавлены через JavaScript -->
                         </div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i>
+                            Серым цветом отмечены прошедшие слоты - они недоступны для бронирования
+                        </small>
                     </div>
 
                     <hr>
@@ -226,7 +243,8 @@
                         <i class="bi bi-info-circle"></i>
                         <strong>Важно:</strong>
                         <ul class="mb-0 mt-2">
-                            <li>Бронирование возможно только в рабочее время: <strong>с 7:00 до 16:30</strong></li>
+                            <li><strong class="text-danger">Нельзя забронировать на прошедшую дату</strong></li>
+                            <li>Бронирование возможно только в рабочее время: <strong>с {{ booking_settings.BOOKING_START_HOUR }}:00 до {{ booking_settings.BOOKING_END_HOUR }}:{{ booking_settings.BOOKING_END_MINUTE }}</strong></li>
                             <li>Минимальное время бронирования: <strong>{{ booking_settings.MIN_BOOKING_DURATION }} минут</strong></li>
                             <li>Максимальное время бронирования: <strong>{{ booking_settings.MAX_BOOKING_DURATION|divisibleby:60 }} часов</strong></li>
                             <li>После отправки заявка будет рассмотрена модератором</li>
@@ -260,9 +278,10 @@
             <div class="card-body">
                 <h6>Правила бронирования:</h6>
                 <ul class="small">
+                    <li class="text-danger"><strong>❌ Нельзя бронировать на прошедшие даты</strong></li>
                     <li>Минимальное время бронирования - {{ booking_settings.MIN_BOOKING_DURATION }} минут</li>
                     <li>Максимальное время бронирования - {{ booking_settings.MAX_BOOKING_DURATION|divisibleby:60 }} часов</li>
-                    <li><strong class="text-primary">Бронирование возможно с 7:00 до 16:30</strong></li>
+                    <li><strong class="text-primary">Бронирование возможно с {{ booking_settings.BOOKING_START_HOUR }}:00 до {{ booking_settings.BOOKING_END_HOUR }}:{{ booking_settings.BOOKING_END_MINUTE }}</strong></li>
                     <li>Заявка должна быть подана минимум за {{ booking_settings.CANCELLATION_DEADLINE_HOURS }} часа до начала</li>
                     <li>Максимальный срок бронирования - {{ booking_settings.MAX_ADVANCE_BOOKING_DAYS }} дней вперед</li>
                 </ul>
@@ -332,80 +351,96 @@
         const endInput = document.getElementById('{{ form.end_time.id_for_label }}');
         const roomSelect = document.getElementById('{{ form.room.id_for_label }}');
 
-        // Добавление быстрых слотов времени
+        // Получаем текущую дату и время
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+
+        // Устанавливаем минимальную дату - сегодня
+        startInput.min = now.toISOString().slice(0, 16);
+        endInput.min = now.toISOString().slice(0, 16);
+
+        // Добавление быстрых слотов времени (только будущие слоты)
         const quickSlots = document.getElementById('quickTimeSlots');
         const workingHours = [];
 
         // Создание слотов с 7:00 до 16:00 с шагом 30 минут
         for (let hour = 7; hour <= 15; hour++) {
             for (let minute of [0, 30]) {
-                if (hour === 15 && minute === 30) continue; // Пропускаем 15:30, так как нужно успеть до 16:30
+                if (hour === 15 && minute === 30) continue;
                 const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
                 workingHours.push(timeStr);
             }
         }
-
-        // Добавление последнего слота в 16:00
         workingHours.push('16:00');
 
+        // Определяем, какие слоты уже прошли сегодня
         workingHours.forEach(time => {
+            const [hours, minutes] = time.split(':').map(Number);
+            const slotDateTime = new Date();
+            slotDateTime.setHours(hours, minutes, 0, 0);
+
             const slot = document.createElement('span');
-            slot.className = 'time-slot available';
+
+            // Проверяем, не прошло ли уже это время сегодня
+            if (slotDateTime < now) {
+                slot.className = 'time-slot past';
+                slot.title = 'Это время уже прошло';
+            } else {
+                slot.className = 'time-slot available';
+            }
+
             slot.textContent = time;
-            slot.onclick = function() {
-                if (startInput.value) {
-                    const date = startInput.value.split('T')[0];
-                    startInput.value = `${date}T${time}`;
 
-                    // Автоматически устанавливаем окончание через 1 час
-                    const [hours, minutes] = time.split(':').map(Number);
-                    let endHour = hours + 1;
-                    let endMinute = minutes;
+            if (slotDateTime >= now) {
+                slot.onclick = function() {
+                    if (startInput.value) {
+                        const selectedDate = startInput.value.split('T')[0];
+                        // Проверяем, не выбрана ли прошедшая дата
+                        if (selectedDate < today) {
+                            alert('Нельзя выбрать прошедшую дату!');
+                            return;
+                        }
+                        startInput.value = `${selectedDate}T${time}`;
 
-                    if (endHour === 16 && endMinute > 30) {
-                        endHour = 16;
-                        endMinute = 30;
+                        // Автоматически устанавливаем окончание через 1 час
+                        let endHour = hours + 1;
+                        let endMinute = minutes;
+
+                        if (endHour === 16 && endMinute > 30) {
+                            endHour = 16;
+                            endMinute = 30;
+                        }
+
+                        if (endHour <= 16) {
+                            endInput.value = `${selectedDate}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+                        }
+                    } else {
+                        alert('Сначала выберите дату');
                     }
+                };
+            }
 
-                    if (endHour <= 16) {
-                        endInput.value = `${date}T${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
-                    }
-                }
-            };
             quickSlots.appendChild(slot);
         });
 
-        // Валидация времени при изменении
-        function validateWorkingHours() {
-            if (startInput.value && endInput.value) {
-                const start = new Date(startInput.value);
-                const end = new Date(endInput.value);
-
-                const startHour = start.getHours();
-                const startMinute = start.getMinutes();
-                const endHour = end.getHours();
-                const endMinute = end.getMinutes();
-
-                let error = '';
-
-                if (startHour < 7) {
-                    error = 'Начало бронирования должно быть не ранее 7:00';
-                } else if (endHour > 16 || (endHour === 16 && endMinute > 30)) {
-                    error = 'Окончание бронирования должно быть не позднее 16:30';
-                } else if (endHour < startHour) {
-                    error = 'Время окончания не может быть раньше времени начала';
-                }
-
-                if (error) {
-                    alert(error);
-                    return false;
-                }
+        // Валидация при изменении даты
+        startInput.addEventListener('change', function() {
+            const selectedDate = new Date(this.value);
+            if (selectedDate < now) {
+                alert('Ошибка: Нельзя выбрать прошедшую дату и время!');
+                this.value = '';
             }
-            return true;
-        }
+        });
 
-        startInput.addEventListener('change', validateWorkingHours);
-        endInput.addEventListener('change', validateWorkingHours);
+        endInput.addEventListener('change', function() {
+            const selectedDate = new Date(this.value);
+            if (selectedDate < now) {
+                alert('Ошибка: Нельзя выбрать прошедшую дату и время!');
+                this.value = '';
+            }
+        });
 
         // Проверка доступности при выборе зала и времени
         roomSelect.addEventListener('change', checkAvailability);
@@ -414,6 +449,28 @@
 
         function checkAvailability() {
             if (roomSelect.value && startInput.value && endInput.value) {
+                const startDate = new Date(startInput.value);
+                const endDate = new Date(endInput.value);
+
+                // Проверка на прошедшие даты
+                if (startDate < now || endDate < now) {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-2';
+                    alertDiv.innerHTML = `
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Нельзя выбрать прошедшую дату!
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+
+                    const form = document.getElementById('bookingForm');
+                    form.insertBefore(alertDiv, form.firstChild);
+
+                    setTimeout(() => {
+                        alertDiv.remove();
+                    }, 5000);
+                    return;
+                }
+
                 fetch(`/api/check-availability/?room_id=${roomSelect.value}&start_time=${startInput.value}&end_time=${endInput.value}`)
                     .then(response => response.json())
                     .then(data => {

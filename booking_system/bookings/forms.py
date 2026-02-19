@@ -1,6 +1,10 @@
 from django import forms
+from django.utils import timezone
+from django.conf import settings
 from django.contrib.auth import authenticate
 from .models import User, Booking, ConferenceRoom
+from datetime import timedelta, datetime
+
 
 class LoginForm(forms.Form):
     """Форма входа"""
@@ -94,16 +98,13 @@ class UserRegistrationForm(forms.ModelForm):
         password = cleaned_data.get('password')
         password_confirm = cleaned_data.get('password_confirm')
 
-        # Проверка совпадения паролей
         if password and password_confirm and password != password_confirm:
             raise forms.ValidationError("Пароли не совпадают")
 
-        # Проверка уникальности username
         username = cleaned_data.get('username')
         if username and User.objects.filter(username=username).exists():
             raise forms.ValidationError("Пользователь с таким именем уже существует")
 
-        # Проверка уникальности email
         email = cleaned_data.get('email')
         if email and User.objects.filter(email=email).exists():
             raise forms.ValidationError("Пользователь с таким email уже существует")
@@ -113,7 +114,7 @@ class UserRegistrationForm(forms.ModelForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.set_password(self.cleaned_data['password'])
-        user.is_active = True  # Активируем пользователя сразу
+        user.is_active = True
         if commit:
             user.save()
         return user
@@ -121,6 +122,7 @@ class UserRegistrationForm(forms.ModelForm):
 
 class UserEditForm(forms.ModelForm):
     """Форма редактирования пользователя"""
+
     class Meta:
         model = User
         fields = ['username', 'email', 'first_name', 'last_name', 'phone', 'department', 'role', 'is_active']
@@ -137,18 +139,21 @@ class UserEditForm(forms.ModelForm):
 
 
 class BookingForm(forms.ModelForm):
-    """Форма создания бронирования"""
+    """Форма создания бронирования с проверкой на прошедшие даты"""
+
     class Meta:
         model = Booking
         fields = ['room', 'title', 'description', 'start_time', 'end_time', 'participants_count']
         widgets = {
             'start_time': forms.DateTimeInput(attrs={
                 'type': 'datetime-local',
-                'class': 'form-control'
+                'class': 'form-control',
+                'min': timezone.now().strftime('%Y-%m-%dT%H:%M')
             }),
             'end_time': forms.DateTimeInput(attrs={
                 'type': 'datetime-local',
-                'class': 'form-control'
+                'class': 'form-control',
+                'min': timezone.now().strftime('%Y-%m-%dT%H:%M')
             }),
             'description': forms.Textarea(attrs={
                 'rows': 4,
@@ -178,23 +183,73 @@ class BookingForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['room'].queryset = ConferenceRoom.objects.filter(is_active=True)
 
+        # Устанавливаем минимальную дату - сегодня
+        min_date = timezone.now().strftime('%Y-%m-%dT%H:%M')
+        self.fields['start_time'].widget.attrs['min'] = min_date
+        self.fields['end_time'].widget.attrs['min'] = min_date
+
     def clean(self):
         cleaned_data = super().clean()
         start_time = cleaned_data.get('start_time')
         end_time = cleaned_data.get('end_time')
         room = cleaned_data.get('room')
 
+        current_time = timezone.now()
+
         if start_time and end_time:
+            # Проверка 1: Нельзя бронировать на прошедшие даты
+            if start_time < current_time:
+                raise forms.ValidationError(
+                    "Нельзя создать бронирование на прошедшую дату. "
+                    "Пожалуйста, выберите будущую дату и время."
+                )
+
+            # Проверка 2: Время окончания должно быть позже времени начала
             if start_time >= end_time:
-                raise forms.ValidationError("Время окончания должно быть позже времени начала")
+                raise forms.ValidationError(
+                    "Время окончания должно быть позже времени начала"
+                )
 
-            # Проверка рабочего времени (7:00 - 16:30)
-            if start_time.hour < 7:
-                raise forms.ValidationError("Бронирование возможно только с 7:00")
-            if end_time.hour > 16 or (end_time.hour == 16 and end_time.minute > 30):
-                raise forms.ValidationError("Бронирование возможно только до 16:30")
+            # Проверка 3: Минимальная длительность (30 минут)
+            min_duration = timedelta(minutes=settings.BOOKING_SETTINGS['MIN_BOOKING_DURATION'])
+            if (end_time - start_time) < min_duration:
+                raise forms.ValidationError(
+                    f"Минимальная длительность бронирования - "
+                    f"{settings.BOOKING_SETTINGS['MIN_BOOKING_DURATION']} минут"
+                )
 
-            # Проверка на конфликты
+            # Проверка 4: Максимальная длительность (8 часов)
+            max_duration = timedelta(minutes=settings.BOOKING_SETTINGS['MAX_BOOKING_DURATION'])
+            if (end_time - start_time) > max_duration:
+                raise forms.ValidationError(
+                    f"Максимальная длительность бронирования - "
+                    f"{settings.BOOKING_SETTINGS['MAX_BOOKING_DURATION'] // 60} часов"
+                )
+
+            # Проверка 5: Рабочее время (7:00 - 16:30)
+            if start_time.hour < settings.BOOKING_SETTINGS['BOOKING_START_HOUR']:
+                raise forms.ValidationError(
+                    f"Бронирование возможно только с "
+                    f"{settings.BOOKING_SETTINGS['BOOKING_START_HOUR']}:00"
+                )
+
+            if (end_time.hour > settings.BOOKING_SETTINGS['BOOKING_END_HOUR'] or
+                    (end_time.hour == settings.BOOKING_SETTINGS['BOOKING_END_HOUR'] and
+                     end_time.minute > settings.BOOKING_SETTINGS['BOOKING_END_MINUTE'])):
+                raise forms.ValidationError(
+                    f"Бронирование возможно только до "
+                    f"{settings.BOOKING_SETTINGS['BOOKING_END_HOUR']}:{settings.BOOKING_SETTINGS['BOOKING_END_MINUTE']}"
+                )
+
+            # Проверка 6: Максимальный срок бронирования вперед
+            max_advance = current_time + timedelta(days=settings.BOOKING_SETTINGS['MAX_ADVANCE_BOOKING_DAYS'])
+            if start_time > max_advance:
+                raise forms.ValidationError(
+                    f"Нельзя забронировать более чем на "
+                    f"{settings.BOOKING_SETTINGS['MAX_ADVANCE_BOOKING_DAYS']} дней вперед"
+                )
+
+            # Проверка 7: Конфликты с другими бронированиями
             if room:
                 conflicting = Booking.objects.filter(
                     room=room,
@@ -203,7 +258,9 @@ class BookingForm(forms.ModelForm):
                     end_time__gt=start_time
                 )
                 if conflicting.exists():
-                    raise forms.ValidationError("Это время уже занято")
+                    raise forms.ValidationError(
+                        "Это время уже занято. Пожалуйста, выберите другое время."
+                    )
 
         return cleaned_data
 
@@ -233,10 +290,11 @@ class ModerationForm(forms.Form):
 
 class RoomForm(forms.ModelForm):
     """Форма для создания/редактирования конференц-зала"""
+
     class Meta:
         model = ConferenceRoom
         fields = ['name', 'capacity', 'location', 'description', 'has_projector',
-                 'has_video_conference', 'has_whiteboard', 'is_active', 'image']
+                  'has_video_conference', 'has_whiteboard', 'is_active', 'image']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',

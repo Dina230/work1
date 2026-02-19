@@ -1,108 +1,121 @@
 {% extends 'bookings/base.html' %}
 {% load static %}
 
-{% block title %}Вход в систему{% endblock %}
+{% block title %}Вход | RoomBooking{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6 col-lg-5">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0">
-                    <i class="bi bi-box-arrow-in-right"></i> 
-                    Вход в систему
-                </h4>
-            </div>
-            <div class="card-body">
+        <div class="text-center mb-4">
+            <i class="bi bi-calendar-check text-primary" style="font-size: 3rem;"></i>
+            <h2 class="mt-3 fw-semibold">Добро пожаловать</h2>
+            <p class="text-secondary">Войдите в систему для продолжения работы</p>
+        </div>
+
+        <div class="card border rounded-3">
+            <div class="card-body p-4">
                 <form method="post" novalidate>
                     {% csrf_token %}
-                    
+
                     {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
-                            {% for error in form.non_field_errors %}
-                                {{ error }}
-                            {% endfor %}
+                        <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
                         </div>
                     {% endif %}
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.username.id_for_label }}" class="form-label">
-                            <i class="bi bi-person"></i> Имя пользователя
+
+                    <div class="mb-4">
+                        <label for="{{ form.username.id_for_label }}" class="form-label fw-medium">
+                            Имя пользователя
                         </label>
-                        <input type="text" 
-                               name="{{ form.username.name }}" 
-                               id="{{ form.username.id_for_label }}"
-                               class="form-control {% if form.username.errors %}is-invalid{% endif %}"
-                               value="{{ form.username.value|default:'' }}"
-                               required>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="bi bi-person text-secondary"></i>
+                            </span>
+                            <input type="text"
+                                   name="{{ form.username.name }}"
+                                   id="{{ form.username.id_for_label }}"
+                                   class="form-control bg-light border-start-0 ps-0 {% if form.username.errors %}is-invalid{% endif %}"
+                                   value="{{ form.username.value|default:'' }}"
+                                   placeholder="Введите имя пользователя"
+                                   required>
+                        </div>
                         {% if form.username.errors %}
-                            <div class="invalid-feedback">
+                            <div class="text-danger small mt-1">
                                 {% for error in form.username.errors %}
                                     {{ error }}
                                 {% endfor %}
                             </div>
                         {% endif %}
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.password.id_for_label }}" class="form-label">
-                            <i class="bi bi-lock"></i> Пароль
+
+                    <div class="mb-4">
+                        <label for="{{ form.password.id_for_label }}" class="form-label fw-medium">
+                            Пароль
                         </label>
-                        <input type="password" 
-                               name="{{ form.password.name }}" 
-                               id="{{ form.password.id_for_label }}"
-                               class="form-control {% if form.password.errors %}is-invalid{% endif %}"
-                               required>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="bi bi-lock text-secondary"></i>
+                            </span>
+                            <input type="password"
+                                   name="{{ form.password.name }}"
+                                   id="{{ form.password.id_for_label }}"
+                                   class="form-control bg-light border-start-0 ps-0 {% if form.password.errors %}is-invalid{% endif %}"
+                                   placeholder="Введите пароль"
+                                   required>
+                        </div>
                         {% if form.password.errors %}
-                            <div class="invalid-feedback">
+                            <div class="text-danger small mt-1">
                                 {% for error in form.password.errors %}
                                     {{ error }}
                                 {% endfor %}
                             </div>
                         {% endif %}
                     </div>
-                    
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="rememberMe">
-                        <label class="form-check-label" for="rememberMe">Запомнить меня</label>
-                    </div>
-                    
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-box-arrow-in-right"></i> Войти
-                        </button>
-                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-medium">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>
+                        Войти
+                    </button>
                 </form>
-                
-                <hr>
-                
-                <div class="text-center">
-                    <p class="mb-0">Нет аккаунта? 
-                        <a href="{% url 'bookings:register' %}" class="text-primary">
-                            Зарегистрироваться
-                        </a>
-                    </p>
-                    <small class="text-muted">
-                        <i class="bi bi-info-circle"></i>
-                        Для входа используйте свои учетные данные
-                    </small>
-                </div>
             </div>
         </div>
-        
-        <!-- Информация для тестирования -->
-        <div class="card mt-3 bg-light">
-            <div class="card-body">
-                <h6 class="card-title">
-                    <i class="bi bi-info-circle"></i> 
-                    Тестовые учетные записи:
-                </h6>
-                <ul class="list-unstyled mb-0 small">
-                    <li><strong>Модератор:</strong> moderator / moderator123</li>
-                    <li><strong>Заявитель:</strong> requester / requester123</li>
-                    <li><strong>Сотрудник:</strong> employee / employee123</li>
-                </ul>
+
+        <!-- Информация для тестирования (только для разработки) -->
+        {% if debug %}
+        <div class="mt-4">
+            <div class="small text-secondary text-center mb-2">
+                <i class="bi bi-info-circle me-1"></i>
+                Тестовые учетные записи
             </div>
+            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                <div class="bg-light px-3 py-2 rounded-3 d-flex align-items-center">
+                    <span class="badge bg-primary me-2">M</span>
+                    <span class="small">moderator</span>
+                </div>
+                <div class="bg-light px-3 py-2 rounded-3 d-flex align-items-center">
+                    <span class="badge bg-success me-2">З</span>
+                    <span class="small">requester</span>
+                </div>
+                <div class="bg-light px-3 py-2 rounded-3 d-flex align-items-center">
+                    <span class="badge bg-info me-2">С</span>
+                    <span class="small">employee</span>
+                </div>
+            </div>
+            <div class="text-center text-secondary small mt-2">
+                Пароль для всех: 123
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="text-center mt-4">
+            <p class="small text-secondary">
+                © 2026 RoomBooking. Все права защищены.
+            </p>
         </div>
     </div>
 </div>

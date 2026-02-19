@@ -1,7 +1,8 @@
 {% extends 'bookings/base.html' %}
 {% load static %}
+{% load tz %}
 
-{% block title %}Расписание бронирований{% endblock %}
+{% block title %}Календарь доступности конференц-залов{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -9,39 +10,108 @@
         overflow-x: auto;
     }
     .schedule-table {
-        min-width: 800px;
+        min-width: 100%;
+        border-collapse: collapse;
+    }
+    .schedule-table th {
+        background-color: #f8f9fa;
+        padding: 12px;
+        text-align: center;
+        border: 1px solid #dee2e6;
+        font-weight: bold;
+    }
+    .schedule-table td {
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        vertical-align: top;
+        height: 120px;
     }
     .time-slot {
         background-color: #f8f9fa;
         font-weight: bold;
         text-align: center;
-        width: 80px;
+        width: 100px;
+        vertical-align: middle;
     }
     .booking-cell {
-        min-height: 60px;
-        padding: 2px;
+        min-height: 100px;
+        padding: 5px;
     }
     .booking-item {
         background-color: #cce5ff;
-        border-left: 3px solid #004085;
-        padding: 5px;
-        margin: 2px;
+        border-left: 4px solid #004085;
+        padding: 8px;
+        margin-bottom: 5px;
+        border-radius: 4px;
         font-size: 0.9em;
         cursor: pointer;
         transition: all 0.2s;
-        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     .booking-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         background-color: #b8daff;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     .booking-title {
         font-weight: bold;
+        margin-bottom: 4px;
+        font-size: 1em;
     }
     .booking-time {
+        font-size: 0.85em;
+        color: #004085;
+        margin-bottom: 4px;
+    }
+    .booking-requester {
         font-size: 0.8em;
-        color: #666;
+        color: #495057;
+        margin-bottom: 2px;
+    }
+    .booking-participants {
+        font-size: 0.8em;
+        color: #495057;
+    }
+    .free-slot {
+        background-color: #f0fff4;
+        border: 2px dashed #28a745;
+        padding: 15px 10px;
+        border-radius: 6px;
+        text-align: center;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transition: all 0.2s;
+    }
+    .free-slot:hover {
+        background-color: #d4edda;
+        transform: scale(1.02);
+    }
+    .free-slot a {
+        color: #155724;
+        text-decoration: none;
+        width: 100%;
+    }
+    .free-text {
+        font-size: 1em;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
+    .book-now-btn {
+        display: inline-block;
+        background-color: #28a745;
+        color: white;
+        padding: 6px 15px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 0.85em;
+        transition: background-color 0.2s;
+    }
+    .book-now-btn:hover {
+        background-color: #218838;
+        color: white;
     }
     .date-navigator {
         display: flex;
@@ -49,6 +119,7 @@
         align-items: center;
         gap: 10px;
         margin-bottom: 20px;
+        flex-wrap: wrap;
     }
     .date-btn {
         padding: 8px 16px;
@@ -57,9 +128,12 @@
         border-radius: 4px;
         cursor: pointer;
         transition: all 0.2s;
+        text-decoration: none;
+        color: #333;
     }
     .date-btn:hover {
         background: #e9ecef;
+        color: #000;
     }
     .date-btn.active {
         background: #007bff;
@@ -68,13 +142,54 @@
     }
     .working-hours {
         background-color: #e8f5e9;
-        padding: 10px;
-        border-radius: 4px;
-        margin-bottom: 15px;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
         border-left: 4px solid #28a745;
     }
     .working-hours i {
         color: #28a745;
+    }
+    .room-header {
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+    .room-capacity {
+        font-size: 0.85em;
+        color: #6c757d;
+        font-weight: normal;
+    }
+    .no-bookings-message {
+        text-align: center;
+        padding: 40px;
+        color: #6c757d;
+        font-style: italic;
+    }
+    .legend {
+        display: flex;
+        gap: 20px;
+        margin: 20px 0;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+    }
+    .legend-color.booked {
+        background-color: #cce5ff;
+        border-left: 4px solid #004085;
+    }
+    .legend-color.free {
+        background-color: #f0fff4;
+        border: 2px dashed #28a745;
     }
 </style>
 {% endblock %}
@@ -83,8 +198,8 @@
 <div class="row">
     <div class="col-12">
         <h2 class="mb-4">
-            <i class="bi bi-calendar-week"></i> 
-            Расписание бронирований
+            <i class="bi bi-calendar-week"></i>
+            Календарь доступности конференц-залов
         </h2>
     </div>
 </div>
@@ -93,41 +208,59 @@
 <div class="row mb-3">
     <div class="col-12">
         <div class="working-hours">
-            <i class="bi bi-clock-history"></i> 
-            <strong>Режим работы конференц-залов:</strong> 
+            <i class="bi bi-clock-history"></i>
+            <strong>Режим работы конференц-залов:</strong>
             с {{ booking_settings.BOOKING_START_HOUR }}:00 до {{ booking_settings.BOOKING_END_HOUR }}:{{ booking_settings.BOOKING_END_MINUTE }}
             <span class="badge bg-success ms-2">Рабочее время</span>
         </div>
     </div>
 </div>
 
-<!-- Фильтры -->
+<!-- Легенда -->
+<div class="legend">
+    <div class="legend-item">
+        <div class="legend-color booked"></div>
+        <span>Занято (подтвержденное бронирование)</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color free"></div>
+        <span>Свободно</span>
+    </div>
+</div>
+
+<!-- Навигация по датам -->
 <div class="row mb-4">
-    <div class="col-md-6">
+    <div class="col-12">
         <div class="date-navigator">
-            <a href="?date={{ prev_date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}" 
+            <a href="?date={{ prev_date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}"
                class="date-btn">
-                <i class="bi bi-chevron-left"></i>
+                <i class="bi bi-chevron-left"></i> Пред.
             </a>
-            
+
             {% for d in dates %}
-                <a href="?date={{ d.date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}" 
+                <a href="?date={{ d.date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}"
                    class="date-btn {% if d.is_selected %}active{% endif %}">
                     {{ d.display }}
                     {% if d.is_today %}
-                        <span class="badge bg-info">сегодня</span>
+                        <span class="badge bg-info text-white ms-1">сегодня</span>
                     {% endif %}
                 </a>
             {% endfor %}
-            
-            <a href="?date={{ next_date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}" 
+
+            <a href="?date={{ next_date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}"
                class="date-btn">
-                <i class="bi bi-chevron-right"></i>
+                След. <i class="bi bi-chevron-right"></i>
             </a>
         </div>
     </div>
-    
+</div>
+
+<!-- Фильтр по залам -->
+<div class="row mb-4">
     <div class="col-md-6">
+        <label for="roomFilter" class="form-label">
+            <i class="bi bi-funnel"></i> Фильтр по залу:
+        </label>
         <select class="form-select" id="roomFilter" onchange="filterByRoom(this.value)">
             <option value="">Все конференц-залы</option>
             {% for room in rooms %}
@@ -137,6 +270,18 @@
             {% endfor %}
         </select>
     </div>
+    <div class="col-md-6 text-md-end">
+        <a href="{% url 'bookings:schedule' %}?date={{ selected_date|date:'Y-m-d' }}"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-repeat"></i> Сбросить фильтры
+        </a>
+        {% if user_role == 'employee' or user_role == 'requester' %}
+            <a href="{% url 'bookings:export_schedule' %}?date={{ selected_date|date:'Y-m-d' }}"
+               class="btn btn-success">
+                <i class="bi bi-download"></i> Экспорт
+            </a>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Расписание -->
@@ -145,8 +290,26 @@
         <div class="card shadow">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">
-                    <i class="bi bi-calendar-day"></i> 
+                    <i class="bi bi-calendar-day"></i>
                     Расписание на {{ selected_date|date:"d E Y" }}
+                    {% if room_id %}
+                        {% for room in rooms %}
+                            {% if room.id == room_id %}
+                                - {{ room.name }} (вместимость: {{ room.capacity }} чел.)
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    <span class="badge bg-light text-dark ms-2">
+                        {% if total_bookings == 0 %}
+                            Нет бронирований
+                        {% elif total_bookings == 1 %}
+                            1 бронирование
+                        {% elif total_bookings < 5 %}
+                            {{ total_bookings }} бронирования
+                        {% else %}
+                            {{ total_bookings }} бронирований
+                        {% endif %}
+                    </span>
                 </h5>
             </div>
             <div class="card-body">
@@ -157,12 +320,18 @@
                                 <th class="time-slot">Время</th>
                                 {% if not room_id %}
                                     {% for room in rooms %}
-                                        <th>{{ room.name }}</th>
+                                        <th>
+                                            <div class="room-header">{{ room.name }}</div>
+                                            <div class="room-capacity">{{ room.capacity }} чел.</div>
+                                        </th>
                                     {% endfor %}
                                 {% else %}
                                     {% for room in rooms %}
                                         {% if room.id == room_id %}
-                                            <th>{{ room.name }}</th>
+                                            <th>
+                                                <div class="room-header">{{ room.name }}</div>
+                                                <div class="room-capacity">{{ room.capacity }} чел.</div>
+                                            </th>
                                         {% endif %}
                                     {% endfor %}
                                 {% endif %}
@@ -171,133 +340,66 @@
                         <tbody>
                             {% for slot in timeline %}
                                 <tr>
-                                    <td class="time-slot">
-                                        {{ slot.hour }}
-                                        {% if slot.hour == "16:00" %}
-                                            <br><small class="text-muted">до 16:30</small>
-                                        {% endif %}
-                                    </td>
-                                    
-                                    {% if not room_id %}
-                                        {% for room in rooms %}
-                                            <td class="booking-cell">
-                                                {% for booking in slot.bookings %}
-                                                    {% if booking.room.id == room.id %}
-                                                        <div class="booking-item" 
-                                                             onclick="location.href='{% url 'bookings:booking_detail' booking.id %}'">
-                                                            <div class="booking-title">{{ booking.title }}</div>
-                                                            <div class="booking-time">
-                                                                {{ booking.start_time|date:"H:i" }} - {{ booking.end_time|date:"H:i" }}
-                                                            </div>
-                                                            <div class="small">
-                                                                <i class="bi bi-person"></i> {{ booking.requester.get_full_name|default:booking.requester.username }}
-                                                                <br>
-                                                                <i class="bi bi-people"></i> {{ booking.participants_count }} чел.
-                                                            </div>
-                                                        </div>
-                                                    {% endif %}
-                                                {% empty %}
-                                                    {% if slot.hour != "16:00" or forloop.counter <= 9 %}
-                                                        <div class="text-center text-muted small py-2">
-                                                            <i class="bi bi-clock"></i> Свободно
-                                                        </div>
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </td>
-                                        {% endfor %}
-                                    {% else %}
+                                    <td class="time-slot">{{ slot.label }}</td>
+
+                                    {% for item in slot.data %}
                                         <td class="booking-cell">
-                                            {% for booking in slot.bookings %}
-                                                {% if booking.room.id == room_id %}
-                                                    <div class="booking-item" 
-                                                         onclick="location.href='{% url 'bookings:booking_detail' booking.id %}'">
-                                                        <div class="booking-title">{{ booking.title }}</div>
-                                                        <div class="booking-time">
-                                                            {{ booking.start_time|date:"H:i" }} - {{ booking.end_time|date:"H:i" }}
-                                                        </div>
-                                                        <div class="small">
-                                                            <i class="bi bi-person"></i> {{ booking.requester.get_full_name|default:booking.requester.username }}
-                                                            <br>
-                                                            <i class="bi bi-people"></i> {{ booking.participants_count }} чел.
-                                                        </div>
+                                            {% for booking in item.bookings %}
+                                                <div class="booking-item"
+                                                     onclick="location.href='{% url 'bookings:booking_detail' booking.booking.id %}'"
+                                                     title="Нажмите для просмотра деталей">
+                                                    <div class="booking-title">{{ booking.booking.title|truncatechars:20 }}</div>
+                                                    <div class="booking-time">
+                                                        {# 🔥 ИСПРАВЛЕНО: используем local_start и local_end #}
+                                                        {{ booking.local_start|time:"H:i" }} - {{ booking.local_end|time:"H:i" }}
                                                     </div>
-                                                {% endif %}
+                                                    <div class="booking-requester">
+                                                        <i class="bi bi-person"></i>
+                                                        {{ booking.booking.requester.get_full_name|default:booking.booking.requester.username|truncatechars:12 }}
+                                                    </div>
+                                                    <div class="booking-participants">
+                                                        <i class="bi bi-people"></i> {{ booking.booking.participants_count }} чел.
+                                                    </div>
+                                                </div>
                                             {% empty %}
-                                                {% if slot.hour != "16:00" or forloop.counter <= 9 %}
-                                                    <div class="text-center text-muted small py-2">
-                                                        <i class="bi bi-clock"></i> Свободно
-                                                    </div>
-                                                {% endif %}
+                                                <div class="free-slot">
+                                                    {% if user_role == 'requester' %}
+                                                        <a href="{% url 'bookings:create_booking' %}?room={{ item.room.id }}&date={{ selected_date|date:'Y-m-d' }}&start={{ slot.hour }}"
+                                                           class="d-block">
+                                                            <div class="free-text">
+                                                                <i class="bi bi-clock"></i> Свободно
+                                                            </div>
+                                                            <span class="book-now-btn">
+                                                                <i class="bi bi-calendar-plus"></i> Забронировать
+                                                            </span>
+                                                        </a>
+                                                    {% else %}
+                                                        <div class="free-text text-success">
+                                                            <i class="bi bi-check-circle"></i> Свободно
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
                                             {% endfor %}
                                         </td>
-                                    {% endif %}
+                                    {% endfor %}
                                 </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-                
-                <!-- Легенда -->
-                <div class="mt-3">
-                    <h6>Условные обозначения:</h6>
-                    <span class="badge bg-info me-2">
-                        <i class="bi bi-clock"></i> С 7:00 до 16:30
-                    </span>
-                    <span class="badge bg-success me-2">
-                        <i class="bi bi-check-circle"></i> Подтвержденное бронирование
-                    </span>
-                    <span class="badge bg-warning me-2">
-                        <i class="bi bi-exclamation-triangle"></i> Ожидает подтверждения (не отображается)
-                    </span>
-                </div>
-            </div>
-            <div class="card-footer">
-                <div class="d-flex justify-content-between align-items-center">
-                    <a href="{% url 'bookings:schedule' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-calendar-week"></i> Сбросить фильтры
-                    </a>
-                    <a href="{% url 'bookings:export_schedule' %}?date={{ selected_date|date:'Y-m-d' }}" 
-                       class="btn btn-success">
-                        <i class="bi bi-download"></i> Экспорт в CSV
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Статистика по времени -->
-<div class="row mt-4">
-    <div class="col-md-4">
-        <div class="card bg-light">
-            <div class="card-body">
-                <h6 class="card-title">
-                    <i class="bi bi-clock"></i> 
-                    Начало работы
-                </h6>
-                <h3>7:00</h3>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card bg-light">
-            <div class="card-body">
-                <h6 class="card-title">
-                    <i class="bi bi-clock-history"></i> 
-                    Окончание работы
-                </h6>
-                <h3>16:30</h3>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card bg-light">
-            <div class="card-body">
-                <h6 class="card-title">
-                    <i class="bi bi-calendar-check"></i> 
-                    Всего бронирований
-                </h6>
-                <h3>{{ bookings.count }}</h3>
+                {% if total_bookings == 0 %}
+                    <div class="no-bookings-message">
+                        <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>
+                        <h5 class="mt-3">На {{ selected_date|date:"d.m.Y" }} нет подтвержденных бронирований</h5>
+                        <p class="text-muted">Все залы свободны. Вы можете создать новую заявку.</p>
+                        {% if user_role == 'requester' %}
+                            <a href="{% url 'bookings:create_booking' %}" class="btn btn-primary">
+                                <i class="bi bi-calendar-plus"></i> Создать заявку
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>

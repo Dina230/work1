@@ -7,6 +7,8 @@ urlpatterns = [
     # Аутентификация
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+
+    # Регистрация отключена — показывает информационную страницу
     path('register/', views.register_view, name='register'),
 
     # Главная страница
@@ -30,7 +32,7 @@ urlpatterns = [
     path('moderator/users/<int:user_id>/toggle-active/', views.toggle_user_active, name='toggle_user_active'),
     path('moderator/users/create/', views.create_user, name='create_user'),
 
-    # Для сотрудника (employee)
+    # Для сотрудника (employee) и всех авторизованных
     path('schedule/', views.schedule, name='schedule'),
     path('schedule/room/<int:room_id>/', views.room_schedule, name='room_schedule'),
     path('schedule/export/', views.export_schedule, name='export_schedule'),

@@ -3,25 +3,184 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Система бронирования конференц-залов{% endblock %}</title>
+    <title>{% block title %}Конференц-залы ООО "АлГИЗ"{% endblock %}</title>
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
-    <!-- FullCalendar CSS -->
-    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.css' rel='stylesheet' />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     {% load static %}
     <link rel="stylesheet" href="{% static 'bookings/css/style.css' %}">
     {% block extra_css %}{% endblock %}
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .navbar {
+            background-color: #ffffff !important;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            color: #0f172a !important;
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+
+        .navbar-brand i {
+            color: #3b82f6;
+            margin-right: 0.5rem;
+        }
+
+        .nav-link {
+            color: #475569 !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem !important;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            color: #0f172a !important;
+            background-color: #f1f5f9;
+        }
+
+        .nav-link.active {
+            color: #3b82f6 !important;
+            background-color: #eff6ff;
+        }
+
+        .nav-link i {
+            margin-right: 0.5rem;
+        }
+
+        .dropdown-menu {
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .dropdown-item {
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+        }
+
+        .dropdown-item i {
+            margin-right: 0.5rem;
+            width: 1.25rem;
+            color: #64748b;
+        }
+
+        .badge {
+            font-weight: 500;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        .badge.bg-warning {
+            background-color: #f59e0b !important;
+            color: #ffffff;
+        }
+
+        .footer {
+            background-color: #ffffff !important;
+            border-top: 1px solid #e2e8f0;
+            color: #64748b;
+        }
+
+        .alert {
+            border: none;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-success {
+            background-color: #ecfdf5;
+            color: #065f46;
+        }
+
+        .alert-danger {
+            background-color: #fef2f2;
+            color: #991b1b;
+        }
+
+        .alert-warning {
+            background-color: #fffbeb;
+            color: #92400e;
+        }
+
+        .alert-info {
+            background-color: #eff6ff;
+            color: #1e40af;
+        }
+
+        .btn {
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #3b82f6;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+
+        .btn-outline-primary {
+            border: 1px solid #3b82f6;
+            color: #3b82f6;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: #3b82f6;
+            color: #ffffff;
+        }
+
+        .card {
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1rem;
+            font-weight: 600;
+        }
+
+        .form-control, .form-select {
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+    </style>
 </head>
 <body>
     <!-- Навигационная панель -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg">
         <div class="container">
             <a class="navbar-brand" href="{% url 'bookings:index' %}">
-                <i class="bi bi-calendar-check"></i> BookingSystem
+                <i class="bi bi-calendar-check"></i>
+                Конференц-залы ООО "АлГИЗ"
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -35,19 +194,19 @@
                             <li class="nav-item">
                                 <a class="nav-link {% if request.resolver_match.url_name == 'moderator_dashboard' %}active{% endif %}"
                                    href="{% url 'bookings:moderator_dashboard' %}">
-                                    <i class="bi bi-shield-check"></i> Панель модератора
+                                    <i class="bi bi-shield-check"></i>Дашборд
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {% if request.resolver_match.url_name == 'room_management' %}active{% endif %}"
                                    href="{% url 'bookings:room_management' %}">
-                                    <i class="bi bi-building"></i> Управление залами
+                                    <i class="bi bi-building"></i>Залы
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}"
                                    href="{% url 'bookings:user_management' %}">
-                                    <i class="bi bi-people"></i> Пользователи
+                                    <i class="bi bi-people"></i>Пользователи
                                 </a>
                             </li>
 
@@ -56,18 +215,19 @@
                             <li class="nav-item">
                                 <a class="nav-link {% if request.resolver_match.url_name == 'create_booking' %}active{% endif %}"
                                    href="{% url 'bookings:create_booking' %}">
-                                    <i class="bi bi-plus-circle"></i> Создать заявку
+                                    <i class="bi bi-plus-circle"></i>Новая заявка
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {% if request.resolver_match.url_name == 'my_bookings' %}active{% endif %}"
                                    href="{% url 'bookings:my_bookings' %}">
-                                    <i class="bi bi-list-check"></i> Мои заявки
-                                    {% with pending_count=user.bookings.filter.status.pending.count %}
-                                        {% if pending_count > 0 %}
-                                            <span class="badge bg-warning">{{ pending_count }}</span>
-                                        {% endif %}
-                                    {% endwith %}
+                                    <i class="bi bi-list-check"></i>Мои заявки
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'schedule' %}active{% endif %}"
+                                   href="{% url 'bookings:schedule' %}">
+                                    <i class="bi bi-calendar-week"></i>Календарь
                                 </a>
                             </li>
 
@@ -76,15 +236,14 @@
                             <li class="nav-item">
                                 <a class="nav-link {% if request.resolver_match.url_name == 'schedule' %}active{% endif %}"
                                    href="{% url 'bookings:schedule' %}">
-                                    <i class="bi bi-calendar-week"></i> Расписание
+                                    <i class="bi bi-calendar-week"></i>Расписание
                                 </a>
                             </li>
                         {% endif %}
 
-                        <!-- Общие ссылки для всех -->
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'bookings:index' %}">
-                                <i class="bi bi-house"></i> Главная
+                                <i class="bi bi-house"></i>Главная
                             </a>
                         </li>
                     {% endif %}
@@ -98,23 +257,17 @@
                                data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-person-circle"></i>
                                 {{ user.get_full_name|default:user.username }}
-                                <span class="badge bg-light text-dark">{{ user.get_role_display }}</span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                 <li>
                                     <a class="dropdown-item" href="#">
-                                        <i class="bi bi-person"></i> Мой профиль
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="#">
-                                        <i class="bi bi-gear"></i> Настройки
+                                        <i class="bi bi-person"></i>Профиль
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item text-danger" href="{% url 'bookings:logout' %}">
-                                        <i class="bi bi-box-arrow-right"></i> Выйти
+                                        <i class="bi bi-box-arrow-right"></i>Выйти
                                     </a>
                                 </li>
                             </ul>
@@ -123,13 +276,13 @@
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'login' %}active{% endif %}"
                                href="{% url 'bookings:login' %}">
-                                <i class="bi bi-box-arrow-in-right"></i> Войти
+                                <i class="bi bi-box-arrow-in-right"></i>Войти
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'register' %}active{% endif %}"
                                href="{% url 'bookings:register' %}">
-                                <i class="bi bi-person-plus"></i> Регистрация
+                                <i class="bi bi-person-plus"></i>Регистрация
                             </a>
                         </li>
                     {% endif %}
@@ -139,19 +292,19 @@
     </nav>
 
     <!-- Основной контент -->
-    <main class="container mt-4">
+    <main class="container mt-5">
         <!-- Сообщения -->
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                     {% if message.tags == 'success' %}
-                        <i class="bi bi-check-circle-fill"></i>
+                        <i class="bi bi-check-circle-fill me-2"></i>
                     {% elif message.tags == 'error' %}
-                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
                     {% elif message.tags == 'warning' %}
-                        <i class="bi bi-exclamation-circle-fill"></i>
+                        <i class="bi bi-exclamation-circle-fill me-2"></i>
                     {% elif message.tags == 'info' %}
-                        <i class="bi bi-info-circle-fill"></i>
+                        <i class="bi bi-info-circle-fill me-2"></i>
                     {% endif %}
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -164,19 +317,15 @@
     </main>
 
     <!-- Футер -->
-    <footer class="footer mt-5 py-3 bg-light">
+    <footer class="footer mt-5 py-4">
         <div class="container text-center">
-            <span class="text-muted">
-                © 2024 Система бронирования конференц-залов. Все права защищены.
-            </span>
+            <span>© 2026 Конференц-залы ООО "АлГИЗ". Все права защищены.</span>
         </div>
     </footer>
 
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/locales/ru.js'></script>
 
     {% block extra_js %}{% endblock %}
 </body>
