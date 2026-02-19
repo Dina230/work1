@@ -279,12 +279,6 @@
                                 <i class="bi bi-box-arrow-in-right"></i>Войти
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'register' %}active{% endif %}"
-                               href="{% url 'bookings:register' %}">
-                                <i class="bi bi-person-plus"></i>Регистрация
-                            </a>
-                        </li>
                     {% endif %}
                 </ul>
             </div>
