@@ -16,7 +16,6 @@ from .forms import (
 )
 from .decorators import moderator_required, requester_required, employee_required, any_role_required
 
-# Настройка логирования
 logger = logging.getLogger(__name__)
 
 
@@ -67,35 +66,6 @@ def logout_view(request):
     return redirect('bookings:login')
 
 
-def register_view(request):
-    """Регистрация нового пользователя"""
-    if request.user.is_authenticated:
-        return redirect('bookings:index')
-
-    if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
-        if form.is_valid():
-            try:
-                user = form.save()
-                login(request, user)
-                messages.success(request, "Регистрация прошла успешно! Добро пожаловать!")
-
-                if user.role == 'requester':
-                    return redirect('bookings:create_booking')
-                else:
-                    return redirect('bookings:schedule')
-            except Exception as e:
-                messages.error(request, f"Ошибка при регистрации: {str(e)}")
-        else:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, error)
-    else:
-        form = UserRegistrationForm()
-
-    return render(request, 'bookings/register.html', {'form': form})
-
-
 # ==================== ОБЩИЕ СТРАНИЦЫ ====================
 
 @any_role_required
@@ -134,6 +104,40 @@ def index(request):
 
 
 @any_role_required
+def profile(request):
+    """Страница профиля пользователя"""
+    user = request.user
+
+    total_bookings = Booking.objects.filter(requester=user).count()
+    pending_bookings = Booking.objects.filter(requester=user, status='pending').count()
+    approved_bookings = Booking.objects.filter(requester=user, status='approved').count()
+    rejected_bookings = Booking.objects.filter(requester=user, status='rejected').count()
+    cancelled_bookings = Booking.objects.filter(requester=user, status='cancelled').count()
+
+    recent_bookings = Booking.objects.filter(requester=user).order_by('-created_at')[:5]
+
+    active_bookings = Booking.objects.filter(
+        requester=user,
+        status='approved',
+        start_time__gte=timezone.now()
+    ).order_by('start_time')[:3]
+
+    context = {
+        'profile_user': user,
+        'total_bookings': total_bookings,
+        'pending_bookings': pending_bookings,
+        'approved_bookings': approved_bookings,
+        'rejected_bookings': rejected_bookings,
+        'cancelled_bookings': cancelled_bookings,
+        'recent_bookings': recent_bookings,
+        'active_bookings': active_bookings,
+        'now': timezone.now(),
+    }
+
+    return render(request, 'bookings/profile.html', context)
+
+
+@any_role_required
 def booking_detail(request, booking_id):
     """Детальная информация о бронировании"""
     booking = get_object_or_404(Booking, id=booking_id)
@@ -153,7 +157,7 @@ def booking_detail(request, booking_id):
 
 @any_role_required
 def check_availability(request):
-    """API для проверки доступности зала с проверкой на прошедшие даты"""
+    """API для проверки доступности зала"""
     if request.method == 'GET':
         room_id = request.GET.get('room_id')
         start_time = request.GET.get('start_time')
@@ -167,7 +171,6 @@ def check_availability(request):
             start = datetime.fromisoformat(start_time)
             end = datetime.fromisoformat(end_time)
 
-            # Делаем start и end timezone-aware если они наивные
             if timezone.is_naive(start):
                 start = timezone.make_aware(start)
             if timezone.is_naive(end):
@@ -175,43 +178,28 @@ def check_availability(request):
 
             now = timezone.now()
 
-            # Проверка на прошедшие даты
             if start < now:
                 return JsonResponse({
                     'available': False,
                     'time_valid': False,
-                    'time_message': 'Нельзя выбрать прошедшую дату и время',
+                    'time_message': 'Нельзя выбрать прошедшую дату',
                     'conflicting': False,
                     'room_name': room.name,
                     'capacity': room.capacity
                 })
 
-            # Проверка рабочего времени
             time_valid = True
             time_message = ""
 
             if start.hour < settings.BOOKING_SETTINGS['BOOKING_START_HOUR']:
                 time_valid = False
-                time_message = f"Бронирование возможно только с {settings.BOOKING_SETTINGS['BOOKING_START_HOUR']}:00"
+                time_message = f"Бронирование только с {settings.BOOKING_SETTINGS['BOOKING_START_HOUR']}:00"
             elif (end.hour > settings.BOOKING_SETTINGS['BOOKING_END_HOUR'] or
                   (end.hour == settings.BOOKING_SETTINGS['BOOKING_END_HOUR'] and
                    end.minute > settings.BOOKING_SETTINGS['BOOKING_END_MINUTE'])):
                 time_valid = False
-                time_message = f"Бронирование возможно только до {settings.BOOKING_SETTINGS['BOOKING_END_HOUR']}:{settings.BOOKING_SETTINGS['BOOKING_END_MINUTE']}"
+                time_message = f"Бронирование только до {settings.BOOKING_SETTINGS['BOOKING_END_HOUR']}:{settings.BOOKING_SETTINGS['BOOKING_END_MINUTE']}"
 
-            # Проверка минимальной длительности
-            min_duration = timedelta(minutes=settings.BOOKING_SETTINGS['MIN_BOOKING_DURATION'])
-            if (end - start) < min_duration:
-                time_valid = False
-                time_message = f"Минимальная длительность бронирования {settings.BOOKING_SETTINGS['MIN_BOOKING_DURATION']} минут"
-
-            # Проверка максимальной длительности
-            max_duration = timedelta(minutes=settings.BOOKING_SETTINGS['MAX_BOOKING_DURATION'])
-            if (end - start) > max_duration:
-                time_valid = False
-                time_message = f"Максимальная длительность бронирования {settings.BOOKING_SETTINGS['MAX_BOOKING_DURATION'] // 60} часов"
-
-            # Проверка конфликтов - только с подтвержденными бронированиями
             conflicting = Booking.objects.filter(
                 room=room,
                 status='approved',
@@ -238,14 +226,13 @@ def check_availability(request):
 
 @requester_required
 def create_booking(request):
-    """Создание новой заявки на бронирование с проверкой на прошедшие даты"""
+    """Создание новой заявки на бронирование"""
     if request.method == 'POST':
         form = BookingForm(request.POST)
         if form.is_valid():
             booking = form.save(commit=False)
             booking.requester = request.user
 
-            # Дополнительная проверка на прошедшую дату
             if booking.start_time < timezone.now():
                 messages.error(request, "Ошибка: Нельзя создать бронирование на прошедшую дату")
                 return render(request, 'bookings/create_booking.html', {
@@ -254,11 +241,10 @@ def create_booking(request):
                     'booking_settings': settings.BOOKING_SETTINGS,
                 })
 
-            # Проверка, что дата не слишком далеко в будущем
             max_advance = timezone.now() + timedelta(days=settings.BOOKING_SETTINGS['MAX_ADVANCE_BOOKING_DAYS'])
             if booking.start_time > max_advance:
                 messages.error(request,
-                               f"Нельзя забронировать более чем на {settings.BOOKING_SETTINGS['MAX_ADVANCE_BOOKING_DAYS']} дней вперед")
+                               f"Нельзя забронировать более чем на {settings.BOOKING_SETTINGS['MAX_ADVANCE_BOOKING_DAYS']} дней")
                 return render(request, 'bookings/create_booking.html', {
                     'form': form,
                     'rooms': ConferenceRoom.objects.filter(is_active=True),
@@ -274,13 +260,9 @@ def create_booking(request):
                 details={'title': booking.title, 'room': booking.room.name}
             )
 
-            messages.success(
-                request,
-                f"Заявка на бронирование '{booking.title}' успешно создана и отправлена на модерацию"
-            )
+            messages.success(request, f"Заявка '{booking.title}' успешно создана")
             return redirect('bookings:booking_detail', booking_id=booking.id)
         else:
-            # Если форма невалидна, показываем ошибки
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, error)
@@ -362,14 +344,8 @@ def cancel_booking(request, booking_id):
     """Отмена бронирования"""
     booking = get_object_or_404(Booking, id=booking_id, requester=request.user)
 
-    if booking.status not in ['pending', 'approved']:
+    if not booking.can_cancel():
         messages.error(request, "Это бронирование нельзя отменить")
-        return redirect('bookings:booking_detail', booking_id=booking.id)
-
-    if booking.status == 'approved' and booking.start_time < timezone.now() + timedelta(
-            hours=settings.BOOKING_SETTINGS['CANCELLATION_DEADLINE_HOURS']):
-        messages.error(request,
-                       f"Нельзя отменить бронирование менее чем за {settings.BOOKING_SETTINGS['CANCELLATION_DEADLINE_HOURS']} часа до начала")
         return redirect('bookings:booking_detail', booking_id=booking.id)
 
     if request.method == 'POST':
@@ -448,7 +424,6 @@ def moderate_booking(request, booking_id):
             comment = form.cleaned_data['comment']
 
             if action == 'approve':
-                # Проверка на конфликты - только с подтвержденными бронированиями
                 conflicting = Booking.objects.filter(
                     room=booking.room,
                     status='approved',
@@ -457,44 +432,28 @@ def moderate_booking(request, booking_id):
                 ).exists()
 
                 if conflicting:
-                    messages.error(
-                        request,
-                        "Обнаружен конфликт с подтвержденным бронированием. Подтверждение невозможно."
-                    )
+                    messages.error(request, "Обнаружен конфликт с подтвержденным бронированием")
                     conflicts = Booking.objects.filter(
                         room=booking.room,
                         status='approved',
                         start_time__lt=booking.end_time,
                         end_time__gt=booking.start_time
                     ).exclude(id=booking.id)
-                    return render(
-                        request,
-                        'bookings/moderate_booking.html',
-                        {'booking': booking, 'form': form, 'conflicts': conflicts}
-                    )
+                    return render(request, 'bookings/moderate_booking.html',
+                                  {'booking': booking, 'form': form, 'conflicts': conflicts})
 
-                # Проверка на прошедшую дату
                 if booking.start_time < timezone.now():
-                    messages.error(
-                        request,
-                        "Нельзя подтвердить бронирование на прошедшую дату."
-                    )
-                    return render(
-                        request,
-                        'bookings/moderate_booking.html',
-                        {'booking': booking, 'form': form}
-                    )
+                    messages.error(request, "Нельзя подтвердить бронирование на прошедшую дату")
+                    return render(request, 'bookings/moderate_booking.html',
+                                  {'booking': booking, 'form': form})
 
                 booking.status = 'approved'
                 messages.success(request, f"Заявка '{booking.title}' подтверждена")
             else:
                 if not comment:
-                    messages.error(request, "При отклонении необходимо указать комментарий")
-                    return render(
-                        request,
-                        'bookings/moderate_booking.html',
-                        {'booking': booking, 'form': form}
-                    )
+                    messages.error(request, "При отклонении укажите комментарий")
+                    return render(request, 'bookings/moderate_booking.html',
+                                  {'booking': booking, 'form': form})
 
                 booking.status = 'rejected'
                 messages.warning(request, f"Заявка '{booking.title}' отклонена")
@@ -514,7 +473,6 @@ def moderate_booking(request, booking_id):
     else:
         form = ModerationForm()
 
-    # Находим конфликтующие подтвержденные бронирования
     conflicts = Booking.objects.filter(
         room=booking.room,
         status='approved',
@@ -601,10 +559,7 @@ def delete_room(request, room_id):
 
     if request.method == 'POST':
         if has_future_bookings:
-            messages.error(
-                request,
-                f"Нельзя удалить зал '{room.name}', так как у него есть будущие бронирования"
-            )
+            messages.error(request, f"Нельзя удалить зал '{room.name}' - есть будущие бронирования")
         else:
             room.delete()
             messages.success(request, f"Зал '{room.name}' удален")
@@ -632,7 +587,6 @@ def user_management(request):
     elif active_filter == 'inactive':
         users = users.filter(is_active=False)
 
-    # Пагинация
     page = request.GET.get('page', 1)
     paginator = Paginator(users, 20)
 
@@ -669,10 +623,10 @@ def create_user(request):
         if form.is_valid():
             try:
                 user = form.save()
-                messages.success(request, f"Пользователь {user.username} успешно создан")
+                messages.success(request, f"Пользователь {user.username} создан")
                 return redirect('bookings:user_management')
             except Exception as e:
-                messages.error(request, f"Ошибка при создании пользователя: {str(e)}")
+                messages.error(request, f"Ошибка: {str(e)}")
         else:
             for field, errors in form.errors.items():
                 for error in errors:
@@ -720,7 +674,7 @@ def toggle_user_active(request, user_id):
     user = get_object_or_404(User, id=user_id)
 
     if user == request.user:
-        messages.error(request, "Вы не можете деактивировать свой собственный аккаунт")
+        messages.error(request, "Нельзя деактивировать свой аккаунт")
         return redirect('bookings:user_management')
 
     if request.method == 'POST':
@@ -736,23 +690,21 @@ def toggle_user_active(request, user_id):
 
 @any_role_required
 def schedule(request):
-    """Просмотр расписания - только подтвержденные бронирования с корректным отображением времени"""
-    selected_date_param = request.GET.get('date')
+    """Просмотр расписания - только подтвержденные бронирования"""
+    selected_date = request.GET.get('date')
     room_id = request.GET.get('room')
 
-    if selected_date_param:
+    if selected_date:
         try:
-            selected_date_obj = datetime.strptime(selected_date_param, '%Y-%m-%d').date()
+            date = datetime.strptime(selected_date, '%Y-%m-%d').date()
         except ValueError:
-            selected_date_obj = timezone.now().date()
+            date = timezone.now().date()
     else:
-        selected_date_obj = timezone.now().date()
+        date = timezone.now().date()
 
-    # Создаем временные границы дня в UTC
-    day_start = timezone.make_aware(datetime.combine(selected_date_obj, datetime.min.time()))
-    day_end = timezone.make_aware(datetime.combine(selected_date_obj, datetime.max.time()))
+    day_start = timezone.make_aware(datetime.combine(date, datetime.min.time()))
+    day_end = timezone.make_aware(datetime.combine(date, datetime.max.time()))
 
-    # Получаем ТОЛЬКО ПОДТВЕРЖДЕННЫЕ бронирования на выбранную дату
     bookings = Booking.objects.filter(
         status='approved',
         start_time__gte=day_start,
@@ -764,43 +716,47 @@ def schedule(request):
 
     rooms = ConferenceRoom.objects.filter(is_active=True)
 
-    # Создаем структуру данных для календаря
-    timeline = []
+    calendar_data = {}
 
-    # Часы с 7 до 16 (по локальному времени)
     for hour in range(7, 17):
-        label = f"{hour:02d}:00"
-        hour_data = []
-
         for room in rooms:
-            room_bookings = []
-            for booking in bookings:
-                if booking.room.id == room.id:
-                    # 🔥 КОНВЕРТИРУЕМ В ЛОКАЛЬНОЕ ВРЕМЯ перед сравнением
-                    local_start = timezone.localtime(booking.start_time)
-                    local_end = timezone.localtime(booking.end_time)
+            key = (hour, room.id)
+            calendar_data[key] = []
 
-                    # Проверяем, что бронирование начинается в этот локальный час
-                    if local_start.hour == hour:
-                        # Добавляем локальное время для отображения в шаблоне
-                        room_bookings.append({
-                            'booking': booking,
-                            'local_start': local_start,
-                            'local_end': local_end,
-                        })
+    for booking in bookings:
+        booking_hour = booking.start_time.hour
+        booking_room_id = booking.room.id
 
+        if 7 <= booking_hour <= 16:
+            key = (booking_hour, booking_room_id)
+            if key in calendar_data:
+                calendar_data[key].append({
+                    'booking': booking,
+                    'local_start': timezone.localtime(booking.start_time),
+                    'local_end': timezone.localtime(booking.end_time)
+                })
+
+    timeline = []
+    for hour in range(7, 17):
+        if hour == 16:
+            slot_label = "16:00"
+        else:
+            slot_label = f"{hour:02d}:00"
+
+        hour_data = []
+        for room in rooms:
+            key = (hour, room.id)
             hour_data.append({
                 'room': room,
-                'bookings': room_bookings
+                'bookings': calendar_data.get(key, [])
             })
 
         timeline.append({
             'hour': hour,
-            'label': label,
+            'label': slot_label,
             'data': hour_data
         })
 
-    # Даты для навигации
     dates = []
     for i in range(-3, 4):
         d = timezone.now().date() + timedelta(days=i)
@@ -808,17 +764,17 @@ def schedule(request):
             'date': d,
             'display': d.strftime('%d.%m'),
             'is_today': d == timezone.now().date(),
-            'is_selected': d == selected_date_obj
+            'is_selected': d == date
         })
 
     context = {
         'rooms': rooms,
-        'selected_date': selected_date_obj,
+        'selected_date': date,
         'timeline': timeline,
         'room_id': int(room_id) if room_id else None,
         'dates': dates,
-        'prev_date': selected_date_obj - timedelta(days=1),
-        'next_date': selected_date_obj + timedelta(days=1),
+        'prev_date': date - timedelta(days=1),
+        'next_date': date + timedelta(days=1),
         'booking_settings': settings.BOOKING_SETTINGS,
         'now': timezone.now(),
         'user_role': request.user.role,
@@ -833,19 +789,18 @@ def room_schedule(request, room_id):
     """Расписание для конкретного зала"""
     room = get_object_or_404(ConferenceRoom, id=room_id, is_active=True)
 
-    selected_date_param = request.GET.get('date')
-    if selected_date_param:
+    selected_date = request.GET.get('date')
+    if selected_date:
         try:
-            selected_date_obj = datetime.strptime(selected_date_param, '%Y-%m-%d').date()
+            date = datetime.strptime(selected_date, '%Y-%m-%d').date()
         except ValueError:
-            selected_date_obj = timezone.now().date()
+            date = timezone.now().date()
     else:
-        selected_date_obj = timezone.now().date()
+        date = timezone.now().date()
 
-    day_start = timezone.make_aware(datetime.combine(selected_date_obj, datetime.min.time()))
-    day_end = timezone.make_aware(datetime.combine(selected_date_obj, datetime.max.time()))
+    day_start = timezone.make_aware(datetime.combine(date, datetime.min.time()))
+    day_end = timezone.make_aware(datetime.combine(date, datetime.max.time()))
 
-    # Получаем только подтвержденные бронирования для конкретного зала
     bookings = Booking.objects.filter(
         room=room,
         status='approved',
@@ -853,19 +808,10 @@ def room_schedule(request, room_id):
         start_time__lte=day_end
     ).order_by('start_time')
 
-    # Конвертируем время в локальное для отображения
-    bookings_data = []
-    for booking in bookings:
-        bookings_data.append({
-            'booking': booking,
-            'local_start': timezone.localtime(booking.start_time),
-            'local_end': timezone.localtime(booking.end_time),
-        })
-
     return render(request, 'bookings/room_schedule.html', {
         'room': room,
-        'bookings': bookings_data,
-        'selected_date': selected_date_obj,
+        'bookings': bookings,
+        'selected_date': date,
         'booking_settings': settings.BOOKING_SETTINGS,
         'now': timezone.now(),
         'user_role': request.user.role,
@@ -874,21 +820,20 @@ def room_schedule(request, room_id):
 
 @any_role_required
 def export_schedule(request):
-    """Экспорт расписания в CSV (только подтвержденные бронирования)"""
-    selected_date_param = request.GET.get('date')
+    """Экспорт расписания в CSV"""
+    selected_date = request.GET.get('date')
 
-    if selected_date_param:
+    if selected_date:
         try:
-            selected_date_obj = datetime.strptime(selected_date_param, '%Y-%m-%d').date()
+            date = datetime.strptime(selected_date, '%Y-%m-%d').date()
         except ValueError:
-            selected_date_obj = timezone.now().date()
+            date = timezone.now().date()
     else:
-        selected_date_obj = timezone.now().date()
+        date = timezone.now().date()
 
-    day_start = timezone.make_aware(datetime.combine(selected_date_obj, datetime.min.time()))
-    day_end = timezone.make_aware(datetime.combine(selected_date_obj, datetime.max.time()))
+    day_start = timezone.make_aware(datetime.combine(date, datetime.min.time()))
+    day_end = timezone.make_aware(datetime.combine(date, datetime.max.time()))
 
-    # Экспортируем только подтвержденные бронирования
     bookings = Booking.objects.filter(
         status='approved',
         start_time__gte=day_start,
@@ -896,21 +841,18 @@ def export_schedule(request):
     ).select_related('room', 'requester').order_by('room__name', 'start_time')
 
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="schedule_{selected_date_obj.strftime("%Y%m%d")}.csv"'
+    response['Content-Disposition'] = f'attachment; filename="schedule_{date.strftime("%Y%m%d")}.csv"'
 
     writer = csv.writer(response)
-    writer.writerow(['Зал', 'Мероприятие', 'Организатор', 'Начало', 'Окончание', 'Количество участников'])
+    writer.writerow(['Зал', 'Мероприятие', 'Организатор', 'Начало', 'Окончание', 'Участников'])
 
     for booking in bookings:
-        # Используем localtime для корректного времени в экспорте
-        local_start = timezone.localtime(booking.start_time)
-        local_end = timezone.localtime(booking.end_time)
         writer.writerow([
             booking.room.name,
             booking.title,
             booking.requester.get_full_name() or booking.requester.username,
-            local_start.strftime('%H:%M'),
-            local_end.strftime('%H:%M'),
+            timezone.localtime(booking.start_time).strftime('%H:%M'),
+            timezone.localtime(booking.end_time).strftime('%H:%M'),
             booking.participants_count
         ])
 

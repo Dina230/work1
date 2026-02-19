@@ -1,7 +1,7 @@
 {% extends 'bookings/base.html' %}
 {% load static %}
 
-{% block title %}Редактирование пользователя{% endblock %}
+{% block title %}Редактирование пользователя | Конференц-залы ООО "АлГИЗ"{% endblock %}
 
 {% block content %}
 <!-- Заголовок -->
@@ -19,7 +19,7 @@
     <!-- Основная форма -->
     <div class="col-lg-8">
         <div class="border rounded-3 bg-white p-4">
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
 
                 {% if form.non_field_errors %}
@@ -32,6 +32,72 @@
                         </div>
                     </div>
                 {% endif %}
+
+                <!-- Аватар -->
+                <div class="mb-4">
+                    <h6 class="fw-medium mb-3">
+                        <i class="bi bi-image text-primary me-2"></i>
+                        Фотография профиля
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-3 mb-md-0">
+                            <div class="avatar-preview border rounded-3 p-3 bg-light">
+                                {% if edit_user.avatar and edit_user.avatar.url %}
+                                    <img src="{{ edit_user.avatar.url }}"
+                                         id="avatarImage"
+                                         class="rounded-circle border"
+                                         style="width: 150px; height: 150px; object-fit: cover;"
+                                         alt="{{ edit_user.username }}"
+                                         onerror="this.style.display='none'; document.getElementById('avatarPlaceholder').style.display='flex';">
+                                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center"
+                                         id="avatarPlaceholder"
+                                         style="width: 150px; height: 150px; display: none;">
+                                        <i class="bi bi-person-circle text-secondary" style="font-size: 5rem;"></i>
+                                    </div>
+                                {% else %}
+                                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center"
+                                         id="avatarPlaceholder"
+                                         style="width: 150px; height: 150px;">
+                                        <i class="bi bi-person-circle text-secondary" style="font-size: 5rem;"></i>
+                                    </div>
+                                    <img src=""
+                                         id="avatarImage"
+                                         class="rounded-circle border d-none"
+                                         style="width: 150px; height: 150px; object-fit: cover;"
+                                         alt="Preview">
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="{{ form.avatar.id_for_label }}" class="form-label fw-medium">
+                                {{ form.avatar.label }}
+                            </label>
+                            {{ form.avatar }}
+                            {% if form.avatar.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.avatar.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Рекомендуемый размер: 200×200px. Форматы: JPG, PNG.
+                                Максимальный размер файла: 2MB.
+                            </div>
+                            {% if edit_user.avatar and edit_user.avatar.url %}
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        onclick="clearAvatar()">
+                                    <i class="bi bi-trash3 me-1"></i>Удалить
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
 
                 <!-- Учетные данные -->
                 <div class="mb-4">
@@ -225,25 +291,64 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
-    // Маска для телефона (если поле существует)
-    document.addEventListener('DOMContentLoaded', function() {
-        const phoneInput = document.getElementById('{{ form.phone.id_for_label }}');
-        if (phoneInput) {
-            phoneInput.addEventListener('input', function(e) {
-                let x = e.target.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
-                if (x) {
-                    e.target.value = '+7' +
-                        (x[2] ? ' (' + x[2] : '') +
-                        (x[3] ? ') ' + x[3] : '') +
-                        (x[4] ? '-' + x[4] : '') +
-                        (x[5] ? '-' + x[5] : '');
+// Маска для телефона
+document.addEventListener('DOMContentLoaded', function() {
+    const phoneInput = document.getElementById('{{ form.phone.id_for_label }}');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+            let x = e.target.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
+            if (x) {
+                e.target.value = '+7' +
+                    (x[2] ? ' (' + x[2] : '') +
+                    (x[3] ? ') ' + x[3] : '') +
+                    (x[4] ? '-' + x[4] : '') +
+                    (x[5] ? '-' + x[5] : '');
+            }
+        });
+    }
+
+    // Предпросмотр аватара
+    const avatarInput = document.getElementById('{{ form.avatar.id_for_label }}');
+    const avatarImage = document.getElementById('avatarImage');
+    const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+
+    if (avatarInput) {
+        avatarInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (avatarImage) {
+                        avatarImage.src = e.target.result;
+                        avatarImage.classList.remove('d-none');
+                        if (avatarPlaceholder) {
+                            avatarPlaceholder.style.display = 'none';
+                        }
+                    }
                 }
-            });
-        }
-    });
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+});
+
+// Функция для очистки аватара
+function clearAvatar() {
+    const avatarInput = document.getElementById('{{ form.avatar.id_for_label }}');
+    const avatarImage = document.getElementById('avatarImage');
+    const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+
+    if (avatarInput) {
+        avatarInput.value = '';
+    }
+    if (avatarImage) {
+        avatarImage.classList.add('d-none');
+    }
+    if (avatarPlaceholder) {
+        avatarPlaceholder.style.display = 'flex';
+    }
+}
 </script>
 {% endblock %}

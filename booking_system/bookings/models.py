@@ -14,15 +14,20 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='employee', verbose_name="Роль")
     phone = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
     department = models.CharField(max_length=100, blank=True, verbose_name="Отдел")
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, verbose_name="Аватар")
 
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
 
     def get_full_name(self):
-        """Полное имя пользователя"""
         if self.first_name and self.last_name:
             return f"{self.first_name} {self.last_name}"
         return self.username
+
+    def get_avatar_url(self):
+        if self.avatar:
+            return self.avatar.url
+        return None
 
     class Meta:
         verbose_name = "Пользователь"
@@ -47,7 +52,6 @@ class ConferenceRoom(models.Model):
         return self.name
 
     def get_equipment_list(self):
-        """Список оборудования"""
         equipment = []
         if self.has_projector:
             equipment.append("Проектор")
@@ -90,7 +94,6 @@ class Booking(models.Model):
         return f"{self.title} - {self.room.name} ({self.get_status_display()})"
 
     def duration(self):
-        """Длительность бронирования"""
         delta = self.end_time - self.start_time
         hours = delta.seconds // 3600
         minutes = (delta.seconds % 3600) // 60
@@ -99,12 +102,10 @@ class Booking(models.Model):
         return f"{minutes} мин"
 
     def duration_in_minutes(self):
-        """Длительность в минутах"""
         delta = self.end_time - self.start_time
         return delta.seconds // 60
 
     def is_conflicting(self):
-        """Проверка на пересечение с другими бронированиями"""
         conflicting = Booking.objects.filter(
             room=self.room,
             status__in=['pending', 'approved'],
@@ -114,34 +115,24 @@ class Booking(models.Model):
         return conflicting.exists()
 
     def is_within_working_hours(self):
-        """Проверка нахождения в рабочее время (7:00 - 16:30)"""
         start_hour = self.start_time.hour
-        start_minute = self.start_time.minute
         end_hour = self.end_time.hour
         end_minute = self.end_time.minute
 
-        # Проверка начала
         if start_hour < 7:
             return False
-
-        # Проверка окончания
         if end_hour > 16:
             return False
         if end_hour == 16 and end_minute > 30:
             return False
-
         return True
 
     def can_cancel(self):
-        """Можно ли отменить бронирование"""
         if self.status not in ['pending', 'approved']:
             return False
-
-        # Для подтвержденных бронирований - не менее чем за 2 часа
         if self.status == 'approved':
             if self.start_time < timezone.now() + timedelta(hours=2):
                 return False
-
         return True
 
     class Meta:

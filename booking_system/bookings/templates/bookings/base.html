@@ -260,14 +260,14 @@
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                 <li>
-                                    <a class="dropdown-item" href="#">
-                                        <i class="bi bi-person"></i>Профиль
+                                    <a class="dropdown-item" href="{% url 'bookings:profile' %}">
+                                        <i class="bi bi-person"></i> Профиль
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item text-danger" href="{% url 'bookings:logout' %}">
-                                        <i class="bi bi-box-arrow-right"></i>Выйти
+                                        <i class="bi bi-box-arrow-right"></i> Выйти
                                     </a>
                                 </li>
                             </ul>
@@ -276,7 +276,7 @@
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'login' %}active{% endif %}"
                                href="{% url 'bookings:login' %}">
-                                <i class="bi bi-box-arrow-in-right"></i>Войти
+                                <i class="bi bi-box-arrow-in-right"></i> Войти
                             </a>
                         </li>
                     {% endif %}
