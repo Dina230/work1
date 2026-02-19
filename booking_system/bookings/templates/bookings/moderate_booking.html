@@ -1,200 +1,267 @@
 {% extends 'bookings/base.html' %}
 {% load static %}
 
-{% block title %}Модерация заявки{% endblock %}
+{% block title %}Модерация заявки | RoomBooking{% endblock %}
 
 {% block content %}
-<div class="row">
+<!-- Хлебные крошки -->
+<div class="row mb-4">
     <div class="col-12">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'bookings:index' %}">Главная</a></li>
-                <li class="breadcrumb-item"><a href="{% url 'bookings:moderator_dashboard' %}">Панель модератора</a></li>
-                <li class="breadcrumb-item active">Модерация заявки #{{ booking.id }}</li>
+                <li class="breadcrumb-item"><a href="{% url 'bookings:index' %}" class="text-decoration-none">Главная</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'bookings:moderator_dashboard' %}" class="text-decoration-none">Панель модератора</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Модерация заявки #{{ booking.id }}</li>
             </ol>
         </nav>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-8">
-        <div class="card shadow mb-4">
-            <div class="card-header bg-warning">
-                <h4 class="mb-0">
-                    <i class="bi bi-shield-check"></i> 
-                    Модерация заявки: {{ booking.title }}
-                </h4>
+<div class="row g-4">
+    <!-- Основная информация -->
+    <div class="col-lg-8">
+        <!-- Заголовок -->
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <div class="bg-warning bg-opacity-10 p-3 rounded-3">
+                <i class="bi bi-shield-check fs-2 text-warning"></i>
             </div>
-            <div class="card-body">
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <h6 class="text-muted">Информация о заявке:</h6>
-                        <table class="table table-sm">
-                            <tr>
-                                <th>ID:</th>
-                                <td>{{ booking.id }}</td>
-                            </tr>
-                            <tr>
-                                <th>Название:</th>
-                                <td>{{ booking.title }}</td>
-                            </tr>
-                            <tr>
-                                <th>Описание:</th>
-                                <td>{{ booking.description|linebreaks }}</td>
-                            </tr>
-                            <tr>
-                                <th>Заявитель:</th>
-                                <td>{{ booking.requester.get_full_name|default:booking.requester.username }}</td>
-                            </tr>
-                            <tr>
-                                <th>Email:</th>
-                                <td>{{ booking.requester.email }}</td>
-                            </tr>
-                            <tr>
-                                <th>Телефон:</th>
-                                <td>{{ booking.requester.phone|default:"Не указан" }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="text-muted">Детали бронирования:</h6>
-                        <table class="table table-sm">
-                            <tr>
-                                <th>Зал:</th>
-                                <td>{{ booking.room.name }}</td>
-                            </tr>
-                            <tr>
-                                <th>Вместимость зала:</th>
-                                <td>{{ booking.room.capacity }} чел.</td>
-                            </tr>
-                            <tr>
-                                <th>Начало:</th>
-                                <td>{{ booking.start_time|date:"d.m.Y H:i" }}</td>
-                            </tr>
-                            <tr>
-                                <th>Окончание:</th>
-                                <td>{{ booking.end_time|date:"d.m.Y H:i" }}</td>
-                            </tr>
-                            <tr>
-                                <th>Длительность:</th>
-                                <td>{{ booking.duration }}</td>
-                            </tr>
-                            <tr>
-                                <th>Участников:</th>
-                                <td>{{ booking.participants_count }} чел.</td>
-                            </tr>
-                        </table>
+            <div>
+                <h2 class="fw-semibold mb-1">Модерация заявки</h2>
+                <p class="text-secondary mb-0">{{ booking.title }}</p>
+            </div>
+            <div class="ms-auto">
+                <span class="badge bg-warning fs-6 p-2">ID: {{ booking.id }}</span>
+            </div>
+        </div>
+
+        <!-- Детали заявки -->
+        <div class="border rounded-3 bg-white p-4 mb-4">
+            <div class="row g-4">
+                <!-- Информация о заявителе -->
+                <div class="col-md-6">
+                    <h6 class="fw-medium mb-3">
+                        <i class="bi bi-person-circle text-primary me-2"></i>
+                        Информация о заявителе
+                    </h6>
+                    <div class="vstack gap-2">
+                        <div class="d-flex">
+                            <span class="text-secondary" style="width: 100px;">Имя:</span>
+                            <span class="fw-medium">{{ booking.requester.get_full_name|default:booking.requester.username }}</span>
+                        </div>
+                        <div class="d-flex">
+                            <span class="text-secondary" style="width: 100px;">Email:</span>
+                            <span>{{ booking.requester.email }}</span>
+                        </div>
+                        <div class="d-flex">
+                            <span class="text-secondary" style="width: 100px;">Телефон:</span>
+                            <span>{{ booking.requester.phone|default:"—" }}</span>
+                        </div>
+                        <div class="d-flex">
+                            <span class="text-secondary" style="width: 100px;">Отдел:</span>
+                            <span>{{ booking.requester.department|default:"—" }}</span>
+                        </div>
                     </div>
                 </div>
 
-                {% if conflicts %}
-                    <div class="alert alert-danger">
-                        <h5><i class="bi bi-exclamation-triangle"></i> Обнаружены конфликты!</h5>
-                        <p>Следующие бронирования пересекаются с данной заявкой:</p>
-                        <ul>
-                            {% for conflict in conflicts %}
-                                <li>
-                                    <strong>{{ conflict.title }}</strong> - 
-                                    {{ conflict.start_time|date:"d.m.Y H:i" }} - {{ conflict.end_time|date:"d.m.Y H:i" }}
-                                    ({{ conflict.requester.username }})
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endif %}
-
-                <hr>
-
-                <form method="post">
-                    {% csrf_token %}
-                    
-                    <div class="mb-3">
-                        <label class="form-label">{{ form.action.label }}</label>
-                        <div class="btn-group w-100" role="group">
-                            {% for radio in form.action %}
-                                <div class="form-check form-check-inline me-3">
-                                    {{ radio.tag }}
-                                    <label class="form-check-label {% if radio.data.value == 'approve' %}text-success{% else %}text-danger{% endif %}" 
-                                           for="{{ radio.id_for_label }}">
-                                        {{ radio.choice_label }}
-                                    </label>
-                                </div>
-                            {% endfor %}
+                <!-- Детали бронирования -->
+                <div class="col-md-6">
+                    <h6 class="fw-medium mb-3">
+                        <i class="bi bi-calendar-check text-primary me-2"></i>
+                        Детали бронирования
+                    </h6>
+                    <div class="vstack gap-2">
+                        <div class="d-flex">
+                            <span class="text-secondary" style="width: 100px;">Зал:</span>
+                            <span class="fw-medium">{{ booking.room.name }}</span>
                         </div>
-                        {% if form.action.errors %}
-                            <div class="text-danger">{{ form.action.errors }}</div>
-                        {% endif %}
+                        <div class="d-flex">
+                            <span class="text-secondary" style="width: 100px;">Дата:</span>
+                            <span>{{ booking.start_time|date:"d.m.Y" }}</span>
+                        </div>
+                        <div class="d-flex">
+                            <span class="text-secondary" style="width: 100px;">Время:</span>
+                            <span>{{ booking.start_time|date:"H:i" }} – {{ booking.end_time|date:"H:i" }}</span>
+                        </div>
+                        <div class="d-flex">
+                            <span class="text-secondary" style="width: 100px;">Длительность:</span>
+                            <span>{{ booking.duration }}</span>
+                        </div>
+                        <div class="d-flex">
+                            <span class="text-secondary" style="width: 100px;">Участников:</span>
+                            <span>{{ booking.participants_count }} чел.</span>
+                        </div>
                     </div>
-
-                    <div class="mb-3">
-                        <label for="{{ form.comment.id_for_label }}" class="form-label">
-                            {{ form.comment.label }}
-                        </label>
-                        {{ form.comment }}
-                        {% if form.comment.help_text %}
-                            <div class="form-text">{{ form.comment.help_text }}</div>
-                        {% endif %}
-                        {% if form.comment.errors %}
-                            <div class="text-danger">{{ form.comment.errors }}</div>
-                        {% endif %}
-                    </div>
-
-                    <div class="d-flex justify-content-between">
-                        <a href="{% url 'bookings:moderator_dashboard' %}" class="btn btn-secondary">
-                            <i class="bi bi-arrow-left"></i> Назад
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-circle"></i> Применить решение
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
+
+            <!-- Описание мероприятия -->
+            <div class="mt-4 pt-3 border-top">
+                <h6 class="fw-medium mb-2">
+                    <i class="bi bi-text-paragraph text-primary me-2"></i>
+                    Описание мероприятия
+                </h6>
+                <div class="bg-light p-3 rounded-3">
+                    {{ booking.description|linebreaks }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Конфликты -->
+        {% if conflicts %}
+            <div class="border border-danger rounded-3 bg-white p-4 mb-4">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="bg-danger bg-opacity-10 p-2 rounded-3">
+                        <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+                    </div>
+                    <h5 class="fw-semibold mb-0 text-danger">Обнаружены конфликты</h5>
+                </div>
+                <p class="text-secondary mb-3">Следующие бронирования пересекаются с данной заявкой:</p>
+                <div class="vstack gap-2">
+                    {% for conflict in conflicts %}
+                        <div class="bg-light p-3 rounded-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-medium">{{ conflict.title }}</span>
+                                <span class="badge bg-secondary">{{ conflict.get_status_display }}</span>
+                            </div>
+                            <div class="small text-secondary">
+                                <i class="bi bi-calendar3 me-1"></i> {{ conflict.start_time|date:"d.m.Y H:i" }} – {{ conflict.end_time|date:"d.m.Y H:i" }}
+                            </div>
+                            <div class="small text-secondary mt-1">
+                                <i class="bi bi-person me-1"></i> {{ conflict.requester.username }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Форма модерации -->
+        <div class="border rounded-3 bg-white p-4">
+            <h5 class="fw-semibold mb-4">Принять решение</h5>
+            <form method="post">
+                {% csrf_token %}
+
+                <!-- Выбор действия -->
+                <div class="mb-4">
+                    <label class="form-label fw-medium">{{ form.action.label }}</label>
+                    <div class="d-flex gap-4">
+                        {% for radio in form.action %}
+                            <div class="form-check">
+                                {{ radio.tag }}
+                                <label class="form-check-label {% if radio.data.value == 'approve' %}text-success{% elif radio.data.value == 'reject' %}text-danger{% endif %}"
+                                       for="{{ radio.id_for_label }}">
+                                    {{ radio.choice_label }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% if form.action.errors %}
+                        <div class="text-danger small mt-1">{{ form.action.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Комментарий -->
+                <div class="mb-4">
+                    <label for="{{ form.comment.id_for_label }}" class="form-label fw-medium">
+                        {{ form.comment.label }}
+                    </label>
+                    {{ form.comment }}
+                    {% if form.comment.help_text %}
+                        <div class="form-text">{{ form.comment.help_text }}</div>
+                    {% endif %}
+                    {% if form.comment.errors %}
+                        <div class="text-danger small mt-1">{{ form.comment.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Кнопки -->
+                <div class="d-flex gap-3">
+                    <a href="{% url 'bookings:moderator_dashboard' %}" class="btn btn-outline-secondary flex-fill py-2">
+                        <i class="bi bi-arrow-left me-2"></i>
+                        Назад
+                    </a>
+                    <button type="submit" class="btn btn-primary flex-fill py-2">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Применить решение
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card shadow mb-4">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-info-circle"></i> 
-                    Информация о зале
-                </h5>
+    <!-- Боковая панель -->
+    <div class="col-lg-4">
+        <!-- Информация о зале -->
+        <div class="border rounded-3 bg-white p-4 mb-4">
+            <h6 class="fw-medium mb-3">
+                <i class="bi bi-building text-primary me-2"></i>
+                {{ booking.room.name }}
+            </h6>
+
+            {% if booking.room.image %}
+                <img src="{{ booking.room.image.url }}" class="img-fluid rounded-3 mb-3" alt="{{ booking.room.name }}">
+            {% endif %}
+
+            <div class="mb-3">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-people text-secondary me-2"></i>
+                    <span class="small">Вместимость: <strong>{{ booking.room.capacity }} чел.</strong></span>
+                </div>
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-geo-alt text-secondary me-2"></i>
+                    <span class="small">{{ booking.room.location }}</span>
+                </div>
             </div>
-            <div class="card-body">
-                <h6>{{ booking.room.name }}</h6>
-                <p class="small">{{ booking.room.description|truncatewords:30 }}</p>
-                
-                <ul class="list-unstyled">
-                    <li><i class="bi bi-people"></i> Вместимость: {{ booking.room.capacity }} чел.</li>
-                    <li><i class="bi bi-geo-alt"></i> {{ booking.room.location }}</li>
-                    {% if booking.room.has_projector %}
-                        <li><i class="bi bi-projector"></i> Проектор</li>
-                    {% endif %}
-                    {% if booking.room.has_video_conference %}
-                        <li><i class="bi bi-camera-video"></i> Видеоконференция</li>
-                    {% endif %}
-                    {% if booking.room.has_whiteboard %}
-                        <li><i class="bi bi-pencil-square"></i> Магнитная доска</li>
-                    {% endif %}
-                </ul>
+
+            <h6 class="fw-medium mb-2">Оснащение:</h6>
+            <div class="d-flex flex-wrap gap-1 mb-3">
+                {% if booking.room.has_projector %}
+                    <span class="badge bg-light text-dark">
+                        <i class="bi bi-projector me-1"></i>Проектор
+                    </span>
+                {% endif %}
+                {% if booking.room.has_video_conference %}
+                    <span class="badge bg-light text-dark">
+                        <i class="bi bi-camera-video me-1"></i>ВКС
+                    </span>
+                {% endif %}
+                {% if booking.room.has_whiteboard %}
+                    <span class="badge bg-light text-dark">
+                        <i class="bi bi-pencil-square me-1"></i>Доска
+                    </span>
+                {% endif %}
             </div>
+
+            {% if booking.room.description %}
+                <h6 class="fw-medium mb-2">Описание:</h6>
+                <p class="small text-secondary">{{ booking.room.description }}</p>
+            {% endif %}
         </div>
 
-        <div class="card shadow">
-            <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-clock-history"></i> 
-                    Правила модерации
-                </h5>
-            </div>
-            <div class="card-body">
-                <ul class="small">
-                    <li>Проверьте, не конфликтует ли заявка с другими бронированиями</li>
-                    <li>Убедитесь, что время бронирования в рабочее время (7:00-16:30)</li>
-                    <li>Количество участников не должно превышать вместимость зала</li>
-                    <li>При отклонении обязательно укажите причину</li>
-                </ul>
-            </div>
+        <!-- Правила модерации -->
+        <div class="border rounded-3 bg-white p-4">
+            <h6 class="fw-medium mb-3">
+                <i class="bi bi-clock-history text-primary me-2"></i>
+                Правила модерации
+            </h6>
+            <ul class="small vstack gap-2 list-unstyled">
+                <li class="d-flex">
+                    <i class="bi bi-check-circle-fill text-success me-2 flex-shrink-0"></i>
+                    <span>Проверьте конфликты с другими бронированиями</span>
+                </li>
+                <li class="d-flex">
+                    <i class="bi bi-check-circle-fill text-success me-2 flex-shrink-0"></i>
+                    <span>Убедитесь в рабочем времени (7:00–16:30)</span>
+                </li>
+                <li class="d-flex">
+                    <i class="bi bi-check-circle-fill text-success me-2 flex-shrink-0"></i>
+                    <span>Количество участников ≤ вместимости зала</span>
+                </li>
+                <li class="d-flex">
+                    <i class="bi bi-exclamation-circle-fill text-warning me-2 flex-shrink-0"></i>
+                    <span>При отклонении укажите причину</span>
+                </li>
+            </ul>
         </div>
     </div>
 </div>

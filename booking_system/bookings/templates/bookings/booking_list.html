@@ -1,50 +1,43 @@
 {% extends 'bookings/base.html' %}
 {% load static %}
 
-{% block title %}Мои заявки{% endblock %}
+{% block title %}Мои заявки | RoomBooking{% endblock %}
 
 {% block content %}
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <h1 class="mb-4">
-            <i class="bi bi-list-check"></i> 
+        <h2 class="fw-semibold">
+            <i class="bi bi-list-check text-primary me-2"></i>
             Мои заявки на бронирование
-        </h1>
+        </h2>
+        <p class="text-secondary">Управляйте своими заявками и отслеживайте их статус</p>
     </div>
 </div>
 
 <!-- Статистика -->
-<div class="row mb-4">
+<div class="row g-3 mb-5">
     <div class="col-md-3">
-        <div class="card text-white bg-primary mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Всего</h5>
-                <h2>{{ stats.total }}</h2>
-            </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.total }}</div>
+            <div class="stat-label">Всего заявок</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card text-white bg-warning mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Ожидают</h5>
-                <h2>{{ stats.pending }}</h2>
-            </div>
+        <div class="stat-card">
+            <div class="stat-value text-warning">{{ stats.pending }}</div>
+            <div class="stat-label">Ожидают</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card text-white bg-success mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Подтверждено</h5>
-                <h2>{{ stats.approved }}</h2>
-            </div>
+        <div class="stat-card">
+            <div class="stat-value text-success">{{ stats.approved }}</div>
+            <div class="stat-label">Подтверждено</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card text-white bg-danger mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Отклонено</h5>
-                <h2>{{ stats.rejected }}</h2>
-            </div>
+        <div class="stat-card">
+            <div class="stat-value text-danger">{{ stats.rejected }}</div>
+            <div class="stat-label">Отклонено</div>
         </div>
     </div>
 </div>
@@ -52,34 +45,33 @@
 <!-- Фильтры -->
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                <form method="get" class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Статус</label>
-                        <select name="status" class="form-select">
-                            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Все</option>
-                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Ожидают</option>
-                            <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Подтверждены</option>
-                            <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Отклонены</option>
-                            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Отменены</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Дата с</label>
-                        <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Дата по</label>
-                        <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-search"></i> Применить
-                        </button>
-                    </div>
-                </form>
-            </div>
+        <div class="border rounded-3 p-4 bg-white">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">Статус</label>
+                    <select name="status" class="form-select">
+                        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Все статусы</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Ожидают подтверждения</option>
+                        <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Подтверждены</option>
+                        <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Отклонены</option>
+                        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Отменены</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-medium">Дата с</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-medium">Дата по</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search me-2"></i>
+                        Применить
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -87,63 +79,123 @@
 <!-- Список бронирований -->
 <div class="row">
     <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                {% if bookings %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
+        <div class="border rounded-3 bg-white overflow-hidden">
+            {% if bookings %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="px-4 py-3 fw-medium">ID</th>
+                                <th class="px-4 py-3 fw-medium">Название</th>
+                                <th class="px-4 py-3 fw-medium">Зал</th>
+                                <th class="px-4 py-3 fw-medium">Дата и время</th>
+                                <th class="px-4 py-3 fw-medium">Участников</th>
+                                <th class="px-4 py-3 fw-medium">Статус</th>
+                                <th class="px-4 py-3 fw-medium">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in bookings %}
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Название</th>
-                                    <th>Зал</th>
-                                    <th>Дата начала</th>
-                                    <th>Дата окончания</th>
-                                    <th>Участников</th>
-                                    <th>Статус</th>
-                                    <th>Действия</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for booking in bookings %}
-                                    <tr>
-                                        <td>{{ booking.id }}</td>
-                                        <td>{{ booking.title }}</td>
-                                        <td>{{ booking.room.name }}</td>
-                                        <td>{{ booking.start_time|date:"d.m.Y H:i" }}</td>
-                                        <td>{{ booking.end_time|date:"d.m.Y H:i" }}</td>
-                                        <td>{{ booking.participants_count }}</td>
-                                        <td>
-                                            <span class="badge 
-                                                {% if booking.status == 'pending' %}bg-warning
-                                                {% elif booking.status == 'approved' %}bg-success
-                                                {% elif booking.status == 'rejected' %}bg-danger
-                                                {% else %}bg-secondary{% endif %}">
-                                                {{ booking.get_status_display }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <a href="{% url 'bookings:booking_detail' booking.id %}" 
-                                               class="btn btn-sm btn-info">
+                                    <td class="px-4 py-3 text-secondary">#{{ booking.id }}</td>
+                                    <td class="px-4 py-3 fw-medium">{{ booking.title|truncatechars:30 }}</td>
+                                    <td class="px-4 py-3">{{ booking.room.name }}</td>
+                                    <td class="px-4 py-3">
+                                        <div>{{ booking.start_time|date:"d.m.Y" }}</div>
+                                        <div class="small text-secondary">
+                                            {{ booking.start_time|date:"H:i" }} - {{ booking.end_time|date:"H:i" }}
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="badge bg-light text-dark">
+                                            <i class="bi bi-people me-1"></i>
+                                            {{ booking.participants_count }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="badge
+                                            {% if booking.status == 'approved' %}bg-success
+                                            {% elif booking.status == 'pending' %}bg-warning
+                                            {% elif booking.status == 'rejected' %}bg-danger
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ booking.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <div class="d-flex gap-2">
+                                            <a href="{% url 'bookings:booking_detail' booking.id %}"
+                                               class="btn btn-sm btn-outline-primary"
+                                               title="Просмотр">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             {% if booking.status == 'pending' %}
-                                                <a href="{% url 'bookings:cancel_booking' booking.id %}" 
-                                                   class="btn btn-sm btn-danger">
+                                                <a href="{% url 'bookings:cancel_booking' booking.id %}"
+                                                   class="btn btn-sm btn-outline-danger"
+                                                   title="Отменить"
+                                                   onclick="return confirm('Вы уверены, что хотите отменить эту заявку?')">
                                                     <i class="bi bi-x-circle"></i>
                                                 </a>
                                             {% endif %}
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <p class="text-muted mb-0">Нет бронирований</p>
-                {% endif %}
-            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-calendar-x display-1 text-secondary"></i>
+                    <h5 class="mt-3 fw-semibold">Нет заявок</h5>
+                    <p class="text-secondary mb-4">У вас пока нет заявок на бронирование</p>
+                    {% if user.role == 'requester' %}
+                        <a href="{% url 'bookings:create_booking' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Создать первую заявку
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>
+
+<!-- Пагинация (если нужна) -->
+{% if bookings.has_other_pages %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if bookings.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ bookings.previous_page_number }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for i in bookings.paginator.page_range %}
+                        {% if bookings.number == i %}
+                            <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ i }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">
+                                    {{ i }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if bookings.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ bookings.next_page_number }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+{% endif %}
 {% endblock %}

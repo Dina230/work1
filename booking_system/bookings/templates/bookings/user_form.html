@@ -1,157 +1,249 @@
 {% extends 'bookings/base.html' %}
 {% load static %}
 
-{% block title %}Редактирование пользователя{% endblock %}
+{% block title %}Редактирование пользователя | RoomBooking{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-8">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0">
-                    <i class="bi bi-person-gear"></i> 
-                    Редактирование пользователя: {{ edit_user.username }}
-                </h4>
-            </div>
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    
-                    {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
+<!-- Заголовок -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="fw-semibold">
+            <i class="bi bi-person-gear text-primary me-2"></i>
+            Редактирование пользователя
+        </h2>
+        <p class="text-secondary">{{ edit_user.username }}</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Основная форма -->
+    <div class="col-lg-8">
+        <div class="border rounded-3 bg-white p-4">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <div>
                             {% for error in form.non_field_errors %}
                                 {{ error }}
                             {% endfor %}
                         </div>
-                    {% endif %}
+                    </div>
+                {% endif %}
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.username.id_for_label }}" class="form-label">
+                <!-- Учетные данные -->
+                <div class="mb-4">
+                    <h6 class="fw-medium mb-3">
+                        <i class="bi bi-shield-lock text-primary me-2"></i>
+                        Учетные данные
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.username.id_for_label }}" class="form-label fw-medium">
                                 {{ form.username.label }}
                             </label>
                             {{ form.username }}
                             {% if form.username.errors %}
-                                <div class="text-danger small">{{ form.username.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.username.errors }}</div>
                             {% endif %}
                         </div>
 
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.email.id_for_label }}" class="form-label">
+                        <div class="col-md-6">
+                            <label for="{{ form.email.id_for_label }}" class="form-label fw-medium">
                                 {{ form.email.label }}
                             </label>
                             {{ form.email }}
                             {% if form.email.errors %}
-                                <div class="text-danger small">{{ form.email.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.email.errors }}</div>
                             {% endif %}
                         </div>
                     </div>
+                </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                <!-- Личные данные -->
+                <div class="mb-4">
+                    <h6 class="fw-medium mb-3">
+                        <i class="bi bi-person-badge text-primary me-2"></i>
+                        Личные данные
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.first_name.id_for_label }}" class="form-label fw-medium">
                                 {{ form.first_name.label }}
                             </label>
                             {{ form.first_name }}
                         </div>
 
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                        <div class="col-md-6">
+                            <label for="{{ form.last_name.id_for_label }}" class="form-label fw-medium">
                                 {{ form.last_name.label }}
                             </label>
                             {{ form.last_name }}
                         </div>
                     </div>
+                </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.phone.id_for_label }}" class="form-label">
+                <!-- Контактная информация -->
+                <div class="mb-4">
+                    <h6 class="fw-medium mb-3">
+                        <i class="bi bi-telephone text-primary me-2"></i>
+                        Контактная информация
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.phone.id_for_label }}" class="form-label fw-medium">
                                 {{ form.phone.label }}
                             </label>
                             {{ form.phone }}
                         </div>
 
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.department.id_for_label }}" class="form-label">
+                        <div class="col-md-6">
+                            <label for="{{ form.department.id_for_label }}" class="form-label fw-medium">
                                 {{ form.department.label }}
                             </label>
                             {{ form.department }}
                         </div>
                     </div>
+                </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.role.id_for_label }}" class="form-label">
+                <!-- Роль и статус -->
+                <div class="mb-4">
+                    <h6 class="fw-medium mb-3">
+                        <i class="bi bi-person-workspace text-primary me-2"></i>
+                        Роль и статус
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.role.id_for_label }}" class="form-label fw-medium">
                                 {{ form.role.label }}
                             </label>
                             {{ form.role }}
                         </div>
 
-                        <div class="col-md-6 mb-3">
-                            <div class="form-check mt-4">
-                                {{ form.is_active }}
-                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                                    {{ form.is_active.label }}
-                                </label>
+                        <div class="col-md-6">
+                            <div class="mt-md-4">
+                                <div class="form-check">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label fw-medium" for="{{ form.is_active.id_for_label }}">
+                                        {{ form.is_active.label }}
+                                    </label>
+                                </div>
+                                <div class="form-text">
+                                    {% if edit_user.is_active %}
+                                        <span class="text-success">Пользователь активен</span>
+                                    {% else %}
+                                        <span class="text-danger">Пользователь деактивирован</span>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <hr>
+                <hr class="my-4">
 
-                    <div class="d-flex justify-content-between">
-                        <a href="{% url 'bookings:user_management' %}" class="btn btn-secondary">
-                            <i class="bi bi-arrow-left"></i> Отмена
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-circle"></i> Сохранить
-                        </button>
-                    </div>
-                </form>
-            </div>
+                <!-- Кнопки -->
+                <div class="d-flex gap-3">
+                    <a href="{% url 'bookings:user_management' %}" class="btn btn-outline-secondary flex-fill py-2">
+                        <i class="bi bi-arrow-left me-2"></i>
+                        Отмена
+                    </a>
+                    <button type="submit" class="btn btn-primary flex-fill py-2">
+                        <i class="bi bi-check-lg me-2"></i>
+                        Сохранить изменения
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card shadow">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-bar-chart"></i> 
-                    Статистика пользователя
-                </h5>
-            </div>
-            <div class="card-body">
-                <ul class="list-group">
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Всего бронирований
-                        <span class="badge bg-primary rounded-pill">{{ stats.total_bookings }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Подтверждено
-                        <span class="badge bg-success rounded-pill">{{ stats.approved_bookings }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Ожидает
-                        <span class="badge bg-warning rounded-pill">{{ stats.pending_bookings }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Отклонено
-                        <span class="badge bg-danger rounded-pill">{{ stats.rejected_bookings }}</span>
-                    </li>
-                </ul>
+    <!-- Статистика пользователя -->
+    <div class="col-lg-4">
+        <div class="border rounded-3 bg-white p-4">
+            <h6 class="fw-medium mb-3">
+                <i class="bi bi-bar-chart text-primary me-2"></i>
+                Статистика пользователя
+            </h6>
 
-                <hr>
-
-                <p class="small text-muted mb-0">
-                    <i class="bi bi-info-circle"></i>
-                    Дата регистрации: {{ edit_user.date_joined|date:"d.m.Y H:i" }}
-                </p>
-                <p class="small text-muted">
-                    <i class="bi bi-clock-history"></i>
-                    Последний вход: {{ edit_user.last_login|date:"d.m.Y H:i"|default:"никогда" }}
-                </p>
+            <div class="vstack gap-2 mb-4">
+                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded-3">
+                    <span class="text-secondary">Всего бронирований</span>
+                    <span class="fw-semibold">{{ stats.total_bookings }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded-3">
+                    <span class="text-secondary">Подтверждено</span>
+                    <span class="fw-semibold text-success">{{ stats.approved_bookings }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded-3">
+                    <span class="text-secondary">Ожидает</span>
+                    <span class="fw-semibold text-warning">{{ stats.pending_bookings }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded-3">
+                    <span class="text-secondary">Отклонено</span>
+                    <span class="fw-semibold text-danger">{{ stats.rejected_bookings }}</span>
+                </div>
             </div>
+
+            <div class="border-top pt-3">
+                <div class="small text-secondary mb-2">
+                    <i class="bi bi-calendar3 me-1"></i>
+                    Дата регистрации:
+                    <span class="text-dark fw-medium">{{ edit_user.date_joined|date:"d.m.Y" }}</span>
+                </div>
+                <div class="small text-secondary">
+                    <i class="bi bi-clock-history me-1"></i>
+                    Последний вход:
+                    <span class="text-dark fw-medium">
+                        {{ edit_user.last_login|date:"d.m.Y H:i"|default:"никогда" }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Дополнительная информация -->
+        <div class="border rounded-3 bg-white p-4 mt-4">
+            <h6 class="fw-medium mb-3">
+                <i class="bi bi-info-circle text-primary me-2"></i>
+                Информация
+            </h6>
+            <ul class="small text-secondary list-unstyled mb-0 vstack gap-2">
+                <li class="d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                    Изменения вступают в силу сразу после сохранения
+                </li>
+                <li class="d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                    Статус "Активен" определяет возможность входа
+                </li>
+                <li class="d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                    Роль можно изменить в любой момент
+                </li>
+            </ul>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Маска для телефона (если поле существует)
+    document.addEventListener('DOMContentLoaded', function() {
+        const phoneInput = document.getElementById('{{ form.phone.id_for_label }}');
+        if (phoneInput) {
+            phoneInput.addEventListener('input', function(e) {
+                let x = e.target.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
+                if (x) {
+                    e.target.value = '+7' +
+                        (x[2] ? ' (' + x[2] : '') +
+                        (x[3] ? ') ' + x[3] : '') +
+                        (x[4] ? '-' + x[4] : '') +
+                        (x[5] ? '-' + x[5] : '');
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

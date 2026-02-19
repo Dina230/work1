@@ -1,92 +1,119 @@
 {% extends 'bookings/base.html' %}
 {% load static %}
 
-{% block title %}Управление конференц-залами{% endblock %}
+{% block title %}Управление залами | RoomBooking{% endblock %}
 
 {% block content %}
-<div class="row">
+<!-- Заголовок и кнопка добавления -->
+<div class="row mb-4">
     <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>
-                <i class="bi bi-building"></i> 
-                Управление конференц-залами
-            </h1>
-            <a href="{% url 'bookings:create_room' %}" class="btn btn-success">
-                <i class="bi bi-plus-circle"></i> 
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h2 class="fw-semibold mb-1">
+                    <i class="bi bi-building text-primary me-2"></i>
+                    Управление конференц-залами
+                </h2>
+                <p class="text-secondary mb-0">Всего залов: {{ rooms|length }}</p>
+            </div>
+            <a href="{% url 'bookings:create_room' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>
                 Добавить зал
             </a>
         </div>
     </div>
 </div>
 
-<div class="row">
+<!-- Сетка залов -->
+<div class="row g-4">
     {% for room in rooms %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card h-100">
+        <div class="col-md-6 col-xl-4">
+            <div class="room-card">
+                <!-- Изображение -->
                 {% if room.image %}
-                    <img src="{{ room.image.url }}" class="card-img-top" alt="{{ room.name }}" style="height: 200px; object-fit: cover;">
+                    <img src="{{ room.image.url }}" class="room-card-image" alt="{{ room.name }}">
                 {% else %}
-                    <div class="card-img-top bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
-                        <i class="bi bi-building" style="font-size: 4rem;"></i>
+                    <div class="room-card-image-placeholder">
+                        <i class="bi bi-building"></i>
                     </div>
                 {% endif %}
-                
-                <div class="card-body">
-                    <h5 class="card-title">{{ room.name }}</h5>
-                    <p class="card-text">{{ room.description|truncatewords:20 }}</p>
-                    
-                    <ul class="list-unstyled">
-                        <li>
-                            <i class="bi bi-people"></i> 
-                            <strong>{{ room.capacity }}</strong> чел.
-                        </li>
-                        <li>
-                            <i class="bi bi-geo-alt"></i> 
-                            {{ room.location }}
-                        </li>
-                        <li>
-                            <i class="bi bi-calendar-check"></i> 
-                            Сегодня: <strong>{{ room.today_bookings }}</strong> бронирований
-                        </li>
-                        <li>
-                            <i class="bi bi-calendar-week"></i> 
-                            Предстоит: <strong>{{ room.upcoming_bookings }}</strong>
-                        </li>
-                    </ul>
 
-                    <div class="mb-2">
-                        {% if room.has_projector %}
-                            <span class="badge bg-info">Проектор</span>
-                        {% endif %}
-                        {% if room.has_video_conference %}
-                            <span class="badge bg-info">ВКС</span>
-                        {% endif %}
-                        {% if room.has_whiteboard %}
-                            <span class="badge bg-info">Доска</span>
-                        {% endif %}
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="badge {% if room.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                <!-- Контент -->
+                <div class="room-card-content">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="room-card-title">{{ room.name }}</h5>
+                        <span class="badge {% if room.is_active %}bg-success{% else %}bg-secondary{% endif %}">
                             {{ room.is_active|yesno:"Активен,Неактивен" }}
                         </span>
-                        <div>
-                            <a href="{% url 'bookings:edit_room' room.id %}" class="btn btn-sm btn-warning">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                            <a href="{% url 'bookings:delete_room' room.id %}" class="btn btn-sm btn-danger">
-                                <i class="bi bi-trash"></i>
-                            </a>
+                    </div>
+
+                    <p class="room-card-description">{{ room.description|truncatewords:15 }}</p>
+
+                    <!-- Характеристики -->
+                    <div class="room-card-stats">
+                        <div class="stat-item">
+                            <i class="bi bi-people"></i>
+                            <span>{{ room.capacity }} чел.</span>
                         </div>
+                        <div class="stat-item">
+                            <i class="bi bi-geo-alt"></i>
+                            <span>{{ room.location }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="bi bi-calendar-check"></i>
+                            <span>Сегодня: {{ room.today_bookings }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="bi bi-calendar-week"></i>
+                            <span>Всего: {{ room.upcoming_bookings }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Оснащение -->
+                    {% if room.has_projector or room.has_video_conference or room.has_whiteboard %}
+                        <div class="room-card-equipment">
+                            {% if room.has_projector %}
+                                <span class="equipment-tag">
+                                    <i class="bi bi-projector me-1"></i>Проектор
+                                </span>
+                            {% endif %}
+                            {% if room.has_video_conference %}
+                                <span class="equipment-tag">
+                                    <i class="bi bi-camera-video me-1"></i>ВКС
+                                </span>
+                            {% endif %}
+                            {% if room.has_whiteboard %}
+                                <span class="equipment-tag">
+                                    <i class="bi bi-pencil-square me-1"></i>Доска
+                                </span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Действия -->
+                    <div class="room-card-actions">
+                        <a href="{% url 'bookings:edit_room' room.id %}" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil me-2"></i>
+                            Редактировать
+                        </a>
+                        <a href="{% url 'bookings:delete_room' room.id %}" class="btn btn-outline-danger">
+                            <i class="bi bi-trash3 me-2"></i>
+                            Удалить
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     {% empty %}
+        <!-- Пустое состояние -->
         <div class="col-12">
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> 
-                Нет конференц-залов. <a href="{% url 'bookings:create_room' %}">Создайте первый зал</a>.
+            <div class="empty-state">
+                <i class="bi bi-building empty-state-icon"></i>
+                <h5 class="fw-semibold">Нет конференц-залов</h5>
+                <p class="text-secondary mb-4">Создайте первый зал, чтобы начать работу</p>
+                <a href="{% url 'bookings:create_room' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Создать первый зал
+                </a>
             </div>
         </div>
     {% endfor %}
