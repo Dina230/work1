@@ -576,7 +576,7 @@ def schedule(request):
         local_start = timezone.localtime(booking.start_time)
         local_end = timezone.localtime(booking.end_time)
 
-        booking_hour = local_start.hour  # ✅ Теперь это локальный час (не UTC!)
+        booking_hour = local_start.hour  # ✅ Локальный час (не UTC!)
         booking_room_id = booking.room.id
 
         if 7 <= booking_hour <= 16:
@@ -590,19 +590,29 @@ def schedule(request):
 
     # Формирование timeline для шаблона
     timeline = []
+    now = timezone.now()
+
     for hour in range(7, 17):
         slot_label = "16:00" if hour == 16 else f"{hour:02d}:00"
+
+        # 🔥 Проверяем, прошёл ли этот час
+        slot_datetime = timezone.make_aware(
+            datetime.combine(selected_date_obj, datetime.min.time()) + timedelta(hours=hour))
+        is_past = slot_datetime < now
+
         hour_data = []
         for room in rooms:
             key = (hour, room.id)
             hour_data.append({
                 'room': room,
-                'bookings': calendar_data.get(key, [])
+                'bookings': calendar_data.get(key, []),
+                'is_past': is_past,  # ✅ Передаём флаг "прошло ли время"
             })
         timeline.append({
             'hour': hour,
             'label': slot_label,
-            'data': hour_data
+            'data': hour_data,
+            'is_past': is_past,
         })
 
     # Даты для навигации

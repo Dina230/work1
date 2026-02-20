@@ -318,3 +318,4 @@ INFO 2026-02-19 08:55:24,939 views 4076 7852 Slot 14:00: 0 bookings
 INFO 2026-02-19 08:55:24,939 views 4076 7852 Slot 15:00: 0 bookings
 INFO 2026-02-19 08:55:24,940 views 4076 7852 Slot 16:00: 0 bookings
 INFO 2026-02-19 08:55:24,940 views 4076 7852 Slot 16:00-16:30: 0 bookings
+DEBUG 2026-02-20 08:28:16,643 views 14744 12776 Error parsing date/time: time data '2026-02-20 7' does not match format '%Y-%m-%d %H:%M'

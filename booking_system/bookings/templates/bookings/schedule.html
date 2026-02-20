@@ -30,7 +30,13 @@
         background-color: var(--bg-light); font-weight: 500; text-align: center;
         width: 100px; vertical-align: middle; color: var(--text-secondary);
     }
+    .time-slot.past {
+        background-color: #f1f5f9; color: #94a3b8;
+    }
     .booking-cell { min-height: 100px; padding: 0.5rem; }
+    .booking-cell.past {
+        background-color: #f8fafc; opacity: 0.7;
+    }
     .booking-item {
         background-color: #ffffff; border: 1px solid var(--border-color);
         border-left: 4px solid var(--accent); padding: 0.75rem; margin-bottom: 0.5rem;
@@ -51,14 +57,22 @@
         transition: all 0.2s;
     }
     .free-slot:hover { border-color: var(--success); background-color: #f0fdf4; }
+    .free-slot.past {
+        border-color: #cbd5e1; background-color: #f1f5f9; cursor: not-allowed;
+    }
+    .free-slot.past:hover { border-color: #cbd5e1; background-color: #f1f5f9; }
     .free-slot a { color: var(--text-primary); text-decoration: none; width: 100%; }
     .free-text { font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.5rem; }
+    .free-text.past { color: #94a3b8; }
     .book-now-btn {
         display: inline-block; background-color: var(--success); color: white;
         padding: 0.25rem 0.75rem; border-radius: 2rem; font-size: 0.8rem;
         transition: background-color 0.2s;
     }
     .book-now-btn:hover { background-color: #16a34a; }
+    .book-now-btn.disabled {
+        background-color: #cbd5e1; cursor: not-allowed; pointer-events: none;
+    }
     .date-navigator {
         display: flex; justify-content: center; align-items: center; gap: 0.5rem;
         margin-bottom: 2rem; flex-wrap: wrap;
@@ -95,6 +109,7 @@
         background-color: white; border: 1px solid var(--accent); border-left: 4px solid var(--accent);
     }
     .legend-color.free { background-color: var(--bg-light); border: 2px dashed var(--border-color); }
+    .legend-color.past { background-color: #f1f5f9; border: 2px solid #cbd5e1; }
     .filter-select {
         border: 1px solid var(--border-color); border-radius: 0.375rem;
         padding: 0.5rem; color: var(--text-primary);
@@ -144,6 +159,7 @@
 <div class="legend">
     <div class="legend-item"><div class="legend-color booked"></div><span>Занято</span></div>
     <div class="legend-item"><div class="legend-color free"></div><span>Свободно</span></div>
+    <div class="legend-item"><div class="legend-color past"></div><span>Прошедшее время</span></div>
 </div>
 
 <div class="date-navigator">
@@ -246,9 +262,9 @@
                     <tbody>
                         {% for slot in timeline %}
                             <tr>
-                                <td class="time-slot">{{ slot.label }}</td>
+                                <td class="time-slot {% if slot.is_past %}past{% endif %}">{{ slot.label }}</td>
                                 {% for item in slot.data %}
-                                    <td class="booking-cell">
+                                    <td class="booking-cell {% if item.is_past %}past{% endif %}">
                                         {% for booking in item.bookings %}
                                             <div class="booking-item"
                                                  onclick="location.href='{% url 'bookings:booking_detail' booking.booking.id %}'"
@@ -267,17 +283,25 @@
                                                 </div>
                                             </div>
                                         {% empty %}
-                                            <div class="free-slot">
-                                                {% if user_role == 'requester' %}
-                                                    <a href="{% url 'bookings:create_booking' %}?room={{ item.room.id }}&date={{ selected_date|date:'Y-m-d' }}&start={{ slot.hour }}"
+                                            <div class="free-slot {% if item.is_past %}past{% endif %}">
+                                                {% if user_role == 'requester' and not item.is_past %}
+                                                    <a href="{% url 'bookings:create_booking' %}?room={{ item.room.id }}&date={{ selected_date|date:'Y-m-d' }}&start={{ slot.hour|stringformat:'02d' }}:00"
                                                        class="d-block">
-                                                        <div class="free-text">Свободно</div>
+                                                        <div class="free-text">
+                                                            <i class="bi bi-check-circle"></i> Свободно
+                                                        </div>
                                                         <span class="book-now-btn">
                                                             <i class="bi bi-plus-circle me-1"></i> Забронировать
                                                         </span>
                                                     </a>
+                                                {% elif user_role == 'requester' and item.is_past %}
+                                                    <div class="free-text past">
+                                                        <i class="bi bi-clock"></i> Время прошло
+                                                    </div>
                                                 {% else %}
-                                                    <div class="free-text">Свободно</div>
+                                                    <div class="free-text">
+                                                        <i class="bi bi-check-circle"></i> Свободно
+                                                    </div>
                                                 {% endif %}
                                             </div>
                                         {% endfor %}
