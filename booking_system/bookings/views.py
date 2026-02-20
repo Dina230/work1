@@ -284,6 +284,45 @@ def cancel_booking(request, booking_id):
     return render(request, 'bookings/cancel_booking.html', {'booking': booking})
 
 
+@any_role_required
+def room_schedule(request, room_id):
+    """Расписание для конкретного зала"""
+    room = get_object_or_404(ConferenceRoom, id=room_id, is_active=True)
+
+    selected_date = request.GET.get('date')
+    if selected_date:
+        try:
+            date = datetime.strptime(selected_date, '%Y-%m-%d').date()
+        except ValueError:
+            date = timezone.now().date()
+    else:
+        date = timezone.now().date()
+
+    day_start = timezone.make_aware(datetime.combine(date, datetime.min.time()))
+    day_end = timezone.make_aware(datetime.combine(date, datetime.max.time()))
+
+    # Получаем только подтвержденные бронирования для конкретного зала
+    bookings = Booking.objects.filter(
+        room=room,
+        status='approved',
+        start_time__gte=day_start,
+        start_time__lte=day_end
+    ).select_related('requester').order_by('start_time')
+
+    context = {
+        'room': room,
+        'bookings': bookings,
+        'selected_date': date,
+        'prev_date': date - timedelta(days=1),
+        'next_date': date + timedelta(days=1),
+        'booking_settings': settings.BOOKING_SETTINGS,
+        'now': timezone.now(),
+        'user_role': request.user.role,
+    }
+
+    return render(request, 'bookings/room_schedule.html', context)
+
+
 # ==================== ДЛЯ МОДЕРАТОРА ====================
 
 @moderator_required
