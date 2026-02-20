@@ -1,7 +1,7 @@
 {% extends 'bookings/base.html' %}
 {% load static %}
 
-{% block title %}Управление пользователями{% endblock %}
+{% block title %}Управление пользователями | Конференц-залы ООО "АлГИЗ"{% endblock %}
 
 {% block content %}
 <!-- Заголовок и кнопка добавления -->
@@ -25,7 +25,7 @@
 
 <!-- Статистика -->
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
+    <div class="col-sm-6 col-md-3">
         <div class="stat-card">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <span class="stat-label">Всего</span>
@@ -34,7 +34,7 @@
             <div class="stat-value">{{ stats.total }}</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-sm-6 col-md-3">
         <div class="stat-card">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <span class="stat-label">Активных</span>
@@ -43,7 +43,7 @@
             <div class="stat-value text-success">{{ stats.active }}</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-sm-6 col-md-3">
         <div class="stat-card">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <span class="stat-label">Новых сегодня</span>
@@ -52,7 +52,7 @@
             <div class="stat-value text-info">{{ stats.new_today }}</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-sm-6 col-md-3">
         <div class="stat-card">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <span class="stat-label">Модераторов</span>
@@ -66,37 +66,37 @@
 <!-- Фильтры -->
 <div class="row mb-4">
     <div class="col-12">
-        <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between">
-            <div class="btn-group" role="group">
+        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+            <div class="d-flex flex-wrap gap-2">
                 <a href="?role=all{% if active_filter %}&active={{ active_filter }}{% endif %}"
-                   class="btn btn-outline-primary {% if role_filter == 'all' %}active{% endif %}">
+                   class="btn btn-sm {% if role_filter == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
                     Все роли
                 </a>
                 <a href="?role=moderator{% if active_filter %}&active={{ active_filter }}{% endif %}"
-                   class="btn btn-outline-primary {% if role_filter == 'moderator' %}active{% endif %}">
+                   class="btn btn-sm {% if role_filter == 'moderator' %}btn-primary{% else %}btn-outline-primary{% endif %}">
                     Модераторы
                 </a>
                 <a href="?role=requester{% if active_filter %}&active={{ active_filter }}{% endif %}"
-                   class="btn btn-outline-primary {% if role_filter == 'requester' %}active{% endif %}">
+                   class="btn btn-sm {% if role_filter == 'requester' %}btn-primary{% else %}btn-outline-primary{% endif %}">
                     Заявители
                 </a>
                 <a href="?role=employee{% if active_filter %}&active={{ active_filter }}{% endif %}"
-                   class="btn btn-outline-primary {% if role_filter == 'employee' %}active{% endif %}">
+                   class="btn btn-sm {% if role_filter == 'employee' %}btn-primary{% else %}btn-outline-primary{% endif %}">
                     Сотрудники
                 </a>
             </div>
 
-            <div class="btn-group" role="group">
+            <div class="d-flex flex-wrap gap-2">
                 <a href="?active=all{% if role_filter %}&role={{ role_filter }}{% endif %}"
-                   class="btn btn-outline-secondary {% if active_filter == 'all' %}active{% endif %}">
+                   class="btn btn-sm {% if active_filter == 'all' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
                     Все
                 </a>
                 <a href="?active=active{% if role_filter %}&role={{ role_filter }}{% endif %}"
-                   class="btn btn-outline-success {% if active_filter == 'active' %}active{% endif %}">
+                   class="btn btn-sm {% if active_filter == 'active' %}btn-success{% else %}btn-outline-success{% endif %}">
                     Активные
                 </a>
                 <a href="?active=inactive{% if role_filter %}&role={{ role_filter }}{% endif %}"
-                   class="btn btn-outline-danger {% if active_filter == 'inactive' %}active{% endif %}">
+                   class="btn btn-sm {% if active_filter == 'inactive' %}btn-danger{% else %}btn-outline-danger{% endif %}">
                     Неактивные
                 </a>
             </div>
@@ -104,39 +104,39 @@
     </div>
 </div>
 
-<!-- Список пользователей -->
+<!-- Список пользователей с вертикальным скроллом -->
 <div class="row">
     <div class="col-12">
-        <div class="border rounded-3 bg-white overflow-hidden">
+        <div class="border rounded-3 bg-white">
             {% if users %}
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light">
+                <div style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0" style="width: 100%;">
+                        <thead class="bg-light" style="position: sticky; top: 0; z-index: 10;">
                             <tr>
-                                <th class="px-4 py-3 fw-medium">ID</th>
-                                <th class="px-4 py-3 fw-medium">Пользователь</th>
-                                <th class="px-4 py-3 fw-medium">Email</th>
-                                <th class="px-4 py-3 fw-medium">Имя</th>
-                                <th class="px-4 py-3 fw-medium">Фамилия</th>
-                                <th class="px-4 py-3 fw-medium">Роль</th>
-                                <th class="px-4 py-3 fw-medium">Телефон</th>
-                                <th class="px-4 py-3 fw-medium">Отдел</th>
-                                <th class="px-4 py-3 fw-medium">Статус</th>
-                                <th class="px-4 py-3 fw-medium">Регистрация</th>
-                                <th class="px-4 py-3 fw-medium">Действия</th>
+                                <th class="px-3 py-3 fw-medium">ID</th>
+                                <th class="px-3 py-3 fw-medium">Пользователь</th>
+                                <th class="px-3 py-3 fw-medium">Email</th>
+                                <th class="px-3 py-3 fw-medium">Имя</th>
+                                <th class="px-3 py-3 fw-medium">Фамилия</th>
+                                <th class="px-3 py-3 fw-medium">Роль</th>
+                                <th class="px-3 py-3 fw-medium">Телефон</th>
+                                <th class="px-3 py-3 fw-medium">Отдел</th>
+                                <th class="px-3 py-3 fw-medium">Статус</th>
+                                <th class="px-3 py-3 fw-medium">Регистрация</th>
+                                <th class="px-3 py-3 fw-medium">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for user in users %}
                                 <tr>
-                                    <td class="px-4 py-3">
+                                    <td class="px-3 py-2">
                                         <span class="badge bg-light text-dark">#{{ user.id }}</span>
                                     </td>
-                                    <td class="px-4 py-3 fw-medium">{{ user.username }}</td>
-                                    <td class="px-4 py-3">{{ user.email }}</td>
-                                    <td class="px-4 py-3">{{ user.first_name|default:"—" }}</td>
-                                    <td class="px-4 py-3">{{ user.last_name|default:"—" }}</td>
-                                    <td class="px-4 py-3">
+                                    <td class="px-3 py-2 fw-medium">{{ user.username }}</td>
+                                    <td class="px-3 py-2">{{ user.email }}</td>
+                                    <td class="px-3 py-2">{{ user.first_name|default:"—" }}</td>
+                                    <td class="px-3 py-2">{{ user.last_name|default:"—" }}</td>
+                                    <td class="px-3 py-2">
                                         <span class="badge
                                             {% if user.role == 'moderator' %}bg-warning
                                             {% elif user.role == 'requester' %}bg-success
@@ -144,15 +144,15 @@
                                             {{ user.get_role_display }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3">{{ user.phone|default:"—" }}</td>
-                                    <td class="px-4 py-3">{{ user.department|default:"—" }}</td>
-                                    <td class="px-4 py-3">
+                                    <td class="px-3 py-2">{{ user.phone|default:"—" }}</td>
+                                    <td class="px-3 py-2">{{ user.department|default:"—" }}</td>
+                                    <td class="px-3 py-2">
                                         <span class="badge {% if user.is_active %}bg-success{% else %}bg-secondary{% endif %}">
                                             {{ user.is_active|yesno:"Активен,Неактивен" }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3">{{ user.date_joined|date:"d.m.Y" }}</td>
-                                    <td class="px-4 py-3">
+                                    <td class="px-3 py-2">{{ user.date_joined|date:"d.m.Y" }}</td>
+                                    <td class="px-3 py-2">
                                         <div class="d-flex gap-2">
                                             <a href="{% url 'bookings:edit_user' user.id %}"
                                                class="btn btn-sm btn-outline-primary"
@@ -173,6 +173,15 @@
                                                     {% endif %}
                                                 </button>
                                             </form>
+                                            {% if user != request.user %}
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    title="Удалить"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#deleteUserModal{{ user.id }}">
+                                                <i class="bi bi-trash3"></i>
+                                            </button>
+                                            {% endif %}
                                         </div>
                                     </td>
                                 </tr>
@@ -195,12 +204,59 @@
     </div>
 </div>
 
+<!-- Модальные окна для подтверждения удаления -->
+{% for user in users %}
+    {% if user != request.user %}
+    <div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1" aria-labelledby="deleteUserModalLabel{{ user.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteUserModalLabel{{ user.id }}">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Подтверждение удаления
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Вы уверены, что хотите удалить пользователя <strong>"{{ user.username }}"</strong>?</p>
+
+                    {% if user.role == 'moderator' %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <strong>Внимание!</strong> Этот пользователь является модератором.
+                        </div>
+                    {% endif %}
+
+                    <p class="text-danger small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Это действие нельзя отменить. Все данные пользователя будут удалены.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-2"></i>
+                        Отмена
+                    </button>
+                    <form method="post" action="{% url 'bookings:delete_user' user.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash3 me-2"></i>
+                            Удалить
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
 <!-- Пагинация -->
 {% if users.has_other_pages %}
     <div class="row mt-4">
         <div class="col-12">
             <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center">
+                <ul class="pagination justify-content-center flex-wrap">
                     {% if users.has_previous %}
                         <li class="page-item">
                             <a class="page-link" href="?page={{ users.previous_page_number }}{% if role_filter != 'all' %}&role={{ role_filter }}{% endif %}{% if active_filter != 'all' %}&active={{ active_filter }}{% endif %}">
@@ -235,4 +291,185 @@
         </div>
     </div>
 {% endif %}
+
+<style>
+    /* Стили для карточек статистики */
+    .stat-card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        height: 100%;
+        transition: border-color 0.2s;
+    }
+
+    .stat-card:hover {
+        border-color: #3b82f6;
+    }
+
+    .stat-card .stat-value {
+        font-size: 2rem;
+        font-weight: 600;
+        line-height: 1;
+        color: #0f172a;
+    }
+
+    .stat-card .stat-label {
+        color: #64748b;
+        font-size: 0.875rem;
+    }
+
+    .stat-card i {
+        font-size: 1.25rem;
+    }
+
+    /* Стили для таблицы */
+    .table {
+        margin-bottom: 0;
+        width: 100%;
+    }
+
+    .table thead th {
+        background-color: #f8fafc;
+        color: #475569;
+        font-weight: 500;
+        border-bottom: 1px solid #e2e8f0;
+        white-space: nowrap;
+    }
+
+    .table td {
+        border-bottom: 1px solid #e2e8f0;
+        color: #1e293b;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    /* Фиксированная шапка при скролле */
+    .table thead tr {
+        position: sticky;
+        top: 0;
+        background-color: #f8fafc;
+    }
+
+    /* Стили для бейджей */
+    .badge {
+        padding: 0.35rem 0.75rem;
+        font-weight: 500;
+        border-radius: 2rem;
+        white-space: nowrap;
+    }
+
+    .badge.bg-warning {
+        background-color: #f59e0b !important;
+        color: #ffffff;
+    }
+
+    .badge.bg-success {
+        background-color: #22c55e !important;
+        color: #ffffff;
+    }
+
+    .badge.bg-info {
+        background-color: #3b82f6 !important;
+        color: #ffffff;
+    }
+
+    .badge.bg-secondary {
+        background-color: #64748b !important;
+        color: #ffffff;
+    }
+
+    .badge.bg-light {
+        background-color: #f1f5f9 !important;
+        color: #334155;
+    }
+
+    /* Стили для кнопок действий */
+    .btn-outline-primary,
+    .btn-outline-success,
+    .btn-outline-secondary,
+    .btn-outline-danger {
+        border: 1px solid #e2e8f0;
+    }
+
+    .btn-outline-primary:hover {
+        background-color: #3b82f6;
+        border-color: #3b82f6;
+        color: #ffffff;
+    }
+
+    .btn-outline-success:hover {
+        background-color: #22c55e;
+        border-color: #22c55e;
+        color: #ffffff;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #64748b;
+        border-color: #64748b;
+        color: #ffffff;
+    }
+
+    .btn-outline-danger:hover {
+        background-color: #ef4444;
+        border-color: #ef4444;
+        color: #ffffff;
+    }
+
+    /* Стили для пагинации */
+    .pagination {
+        gap: 0.25rem;
+        flex-wrap: wrap;
+    }
+
+    .page-link {
+        border: 1px solid #e2e8f0;
+        color: #64748b;
+        border-radius: 0.375rem;
+        padding: 0.5rem 0.75rem;
+        transition: all 0.2s;
+    }
+
+    .page-link:hover {
+        background-color: #f8fafc;
+        border-color: #94a3b8;
+        color: #0f172a;
+    }
+
+    .page-item.active .page-link {
+        background-color: #3b82f6;
+        border-color: #3b82f6;
+        color: #ffffff;
+    }
+
+    /* Стили для фильтров */
+    .btn-sm {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.875rem;
+    }
+
+    /* Адаптивность */
+    @media (max-width: 768px) {
+        .stat-card .stat-value {
+            font-size: 1.5rem;
+        }
+
+        .d-flex.flex-wrap.gap-2 {
+            justify-content: center;
+        }
+
+        .btn-sm {
+            width: auto;
+        }
+
+        /* На мобильных устройствах таблица все еще может требовать горизонтального скролла */
+        .table-responsive {
+            overflow-x: auto;
+        }
+    }
+</style>
 {% endblock %}

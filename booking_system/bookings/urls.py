@@ -29,6 +29,7 @@ urlpatterns = [
     path('moderator/users/create/', views.create_user, name='create_user'),
     path('moderator/users/<int:user_id>/edit/', views.edit_user, name='edit_user'),
     path('moderator/users/<int:user_id>/toggle-active/', views.toggle_user_active, name='toggle_user_active'),
+    path('moderator/users/<int:user_id>/delete/', views.delete_user, name='delete_user'),
 
     # Для сотрудника и всех
     path('schedule/', views.schedule, name='schedule'),

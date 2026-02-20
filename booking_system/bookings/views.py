@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import datetime, timedelta, date
 import csv
+import io
 import logging
 from .models import Booking, ConferenceRoom, User, BookingHistory
 from .forms import (
@@ -506,7 +507,6 @@ def user_management(request):
 def create_user(request):
     """Создание нового пользователя модератором"""
     if request.method == 'POST':
-        # 🔥 ДОБАВЛЕНО: request.FILES для загрузки аватара
         form = UserRegistrationForm(request.POST, request.FILES)
         if form.is_valid():
             try:
@@ -532,7 +532,6 @@ def edit_user(request, user_id):
     """Редактирование пользователя"""
     user = get_object_or_404(User, id=user_id)
     if request.method == 'POST':
-        # 🔥 ДОБАВЛЕНО: request.FILES для загрузки аватара
         form = UserEditForm(request.POST, request.FILES, instance=user)
         if form.is_valid():
             form.save()
@@ -570,6 +569,32 @@ def toggle_user_active(request, user_id):
         status = "активирован" if user.is_active else "деактивирован"
         messages.success(request, f"Пользователь {user.username} {status}")
     return redirect('bookings:user_management')
+
+
+@moderator_required
+def delete_user(request, user_id):
+    """Удаление пользователя"""
+    user = get_object_or_404(User, id=user_id)
+
+    # Нельзя удалить самого себя
+    if user == request.user:
+        messages.error(request, "Вы не можете удалить свой собственный аккаунт")
+        return redirect('bookings:user_management')
+
+    # Проверка на наличие бронирований
+    bookings_count = Booking.objects.filter(requester=user).count()
+
+    if request.method == 'POST':
+        username = user.username
+        user.delete()
+        messages.success(request, f"Пользователь {username} успешно удален")
+        return redirect('bookings:user_management')
+
+    context = {
+        'user': user,
+        'bookings_count': bookings_count
+    }
+    return render(request, 'bookings/user_confirm_delete.html', context)
 
 
 # ==================== ДЛЯ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ (КАЛЕНДАРЬ) ====================
@@ -611,11 +636,10 @@ def schedule(request):
             calendar_data[key] = []
 
     for booking in bookings:
-        # 🔥 КОНВЕРТИРУЕМ В ЛОКАЛЬНОЕ ВРЕМЯ ПЕРЕД извлечением часа
         local_start = timezone.localtime(booking.start_time)
         local_end = timezone.localtime(booking.end_time)
 
-        booking_hour = local_start.hour  # ✅ Локальный час (не UTC!)
+        booking_hour = local_start.hour
         booking_room_id = booking.room.id
 
         if 7 <= booking_hour <= 16:
@@ -634,7 +658,6 @@ def schedule(request):
     for hour in range(7, 17):
         slot_label = "16:00" if hour == 16 else f"{hour:02d}:00"
 
-        # 🔥 Проверяем, прошёл ли этот час
         slot_datetime = timezone.make_aware(
             datetime.combine(selected_date_obj, datetime.min.time()) + timedelta(hours=hour))
         is_past = slot_datetime < now
@@ -645,7 +668,7 @@ def schedule(request):
             hour_data.append({
                 'room': room,
                 'bookings': calendar_data.get(key, []),
-                'is_past': is_past,  # ✅ Передаём флаг "прошло ли время"
+                'is_past': is_past,
             })
         timeline.append({
             'hour': hour,
@@ -728,11 +751,8 @@ def export_schedule(request):
         start_time__lte=day_end
     ).select_related('room', 'requester').order_by('room__name', 'start_time')
 
-    # 🔥 Создаём CSV с BOM-меткой для правильной кодировки в Excel
-    import io
+    # Создаём CSV с BOM-меткой для правильной кодировки в Excel
     output = io.StringIO()
-
-    # 🔥 Добавляем BOM-метку для UTF-8 (чтобы Excel понимал кириллицу)
     output.write('\ufeff')
 
     writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
@@ -750,7 +770,6 @@ def export_schedule(request):
             booking.participants_count
         ])
 
-    # 🔥 Создаём HttpResponse с правильной кодировкой
     response = HttpResponse(output.getvalue(), content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="schedule_{selected_date_obj.strftime("%Y%m%d")}.csv"'
 
