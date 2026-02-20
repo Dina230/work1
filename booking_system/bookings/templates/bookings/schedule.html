@@ -2,11 +2,10 @@
 {% load static %}
 {% load tz %}
 
-{% block title %}Календарь {% endblock %}
+{% block title %}Календарь{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Основные переменные */
     :root {
         --border-color: #e2e8f0;
         --text-primary: #0f172a;
@@ -17,317 +16,112 @@
         --danger: #ef4444;
         --bg-light: #f8fafc;
     }
-
-    /* Контейнер календаря */
-    .schedule-container {
-        overflow-x: auto;
-        margin: 0 -1rem;
-        padding: 0 1rem;
-    }
-
-    /* Таблица */
-    .schedule-table {
-        min-width: 900px;
-        border-collapse: collapse;
-        width: 100%;
-    }
-
+    .schedule-container { overflow-x: auto; margin: 0 -1rem; padding: 0 1rem; }
+    .schedule-table { min-width: 900px; border-collapse: collapse; width: 100%; }
     .schedule-table th {
-        background-color: var(--bg-light);
-        padding: 1rem;
-        text-align: center;
-        border-bottom: 2px solid var(--border-color);
-        font-weight: 600;
-        color: var(--text-primary);
+        background-color: var(--bg-light); padding: 1rem; text-align: center;
+        border-bottom: 2px solid var(--border-color); font-weight: 600; color: var(--text-primary);
     }
-
     .schedule-table td {
-        border: 1px solid var(--border-color);
-        padding: 0.75rem;
-        vertical-align: top;
-        height: 120px;
+        border: 1px solid var(--border-color); padding: 0.75rem;
+        vertical-align: top; height: 120px;
     }
-
-    /* Временные слоты */
     .time-slot {
-        background-color: var(--bg-light);
-        font-weight: 500;
-        text-align: center;
-        width: 100px;
-        vertical-align: middle;
-        color: var(--text-secondary);
+        background-color: var(--bg-light); font-weight: 500; text-align: center;
+        width: 100px; vertical-align: middle; color: var(--text-secondary);
     }
-
-    /* Ячейки бронирований */
-    .booking-cell {
-        min-height: 100px;
-        padding: 0.5rem;
-    }
-
-    /* Элемент бронирования */
+    .booking-cell { min-height: 100px; padding: 0.5rem; }
     .booking-item {
-        background-color: #ffffff;
-        border: 1px solid var(--border-color);
-        border-left: 4px solid var(--accent);
-        padding: 0.75rem;
-        margin-bottom: 0.5rem;
-        border-radius: 0.375rem;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        background-color: #ffffff; border: 1px solid var(--border-color);
+        border-left: 4px solid var(--accent); padding: 0.75rem; margin-bottom: 0.5rem;
+        border-radius: 0.375rem; font-size: 0.9rem; cursor: pointer;
+        transition: all 0.2s; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
-
     .booking-item:hover {
-        border-color: var(--accent);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border-color: var(--accent); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
-
-    .booking-title {
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 0.25rem;
-    }
-
-    .booking-time {
-        font-size: 0.85rem;
-        color: var(--accent);
-        margin-bottom: 0.25rem;
-    }
-
-    .booking-requester {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-        margin-bottom: 0.25rem;
-    }
-
-    .booking-participants {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-    }
-
-    /* Свободный слот */
+    .booking-title { font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem; }
+    .booking-time { font-size: 0.85rem; color: var(--accent); margin-bottom: 0.25rem; }
+    .booking-requester { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.25rem; }
+    .booking-participants { font-size: 0.8rem; color: var(--text-secondary); }
     .free-slot {
-        background-color: var(--bg-light);
-        border: 2px dashed var(--border-color);
-        border-radius: 0.375rem;
-        padding: 1rem;
-        text-align: center;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        background-color: var(--bg-light); border: 2px dashed var(--border-color);
+        border-radius: 0.375rem; padding: 1rem; text-align: center; height: 100%;
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
         transition: all 0.2s;
     }
-
-    .free-slot:hover {
-        border-color: var(--success);
-        background-color: #f0fdf4;
-    }
-
-    .free-slot a {
-        color: var(--text-primary);
-        text-decoration: none;
-        width: 100%;
-    }
-
-    .free-text {
-        font-size: 0.95rem;
-        font-weight: 500;
-        color: var(--text-secondary);
-        margin-bottom: 0.5rem;
-    }
-
+    .free-slot:hover { border-color: var(--success); background-color: #f0fdf4; }
+    .free-slot a { color: var(--text-primary); text-decoration: none; width: 100%; }
+    .free-text { font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.5rem; }
     .book-now-btn {
-        display: inline-block;
-        background-color: var(--success);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 2rem;
-        font-size: 0.8rem;
+        display: inline-block; background-color: var(--success); color: white;
+        padding: 0.25rem 0.75rem; border-radius: 2rem; font-size: 0.8rem;
         transition: background-color 0.2s;
     }
-
-    .book-now-btn:hover {
-        background-color: #16a34a;
-    }
-
-    /* Навигация по датам */
+    .book-now-btn:hover { background-color: #16a34a; }
     .date-navigator {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
+        display: flex; justify-content: center; align-items: center; gap: 0.5rem;
+        margin-bottom: 2rem; flex-wrap: wrap;
     }
-
     .date-btn {
-        padding: 0.5rem 1rem;
-        border: 1px solid var(--border-color);
-        background: white;
-        border-radius: 0.375rem;
-        transition: all 0.2s;
-        text-decoration: none;
-        color: var(--text-secondary);
-        font-size: 0.95rem;
+        padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: white;
+        border-radius: 0.375rem; transition: all 0.2s; text-decoration: none;
+        color: var(--text-secondary); font-size: 0.95rem;
     }
-
-    .date-btn:hover {
-        border-color: var(--accent);
-        color: var(--accent);
-        background-color: var(--bg-light);
-    }
-
-    .date-btn.active {
-        background-color: var(--accent);
-        border-color: var(--accent);
-        color: white;
-    }
-
-    /* Рабочее время */
+    .date-btn:hover { border-color: var(--accent); color: var(--accent); background-color: var(--bg-light); }
+    .date-btn.active { background-color: var(--accent); border-color: var(--accent); color: white; }
     .working-hours {
-        background-color: var(--bg-light);
-        border: 1px solid var(--border-color);
-        border-radius: 0.5rem;
-        padding: 1rem 1.5rem;
-        margin-bottom: 2rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
+        background-color: var(--bg-light); border: 1px solid var(--border-color);
+        border-radius: 0.5rem; padding: 1rem 1.5rem; margin-bottom: 2rem;
+        display: flex; align-items: center; gap: 1rem;
     }
-
-    .working-hours i {
-        color: var(--accent);
-        font-size: 1.25rem;
-    }
-
-    .working-hours strong {
-        color: var(--text-primary);
-    }
-
+    .working-hours i { color: var(--accent); font-size: 1.25rem; }
+    .working-hours strong { color: var(--text-primary); }
     .working-hours .badge {
-        background-color: var(--success) !important;
-        color: white;
-        font-weight: 500;
-        padding: 0.35rem 0.75rem;
+        background-color: var(--success) !important; color: white;
+        font-weight: 500; padding: 0.35rem 0.75rem;
     }
-
-    /* Легенда */
     .legend {
-        display: flex;
-        gap: 2rem;
-        flex-wrap: wrap;
-        margin-bottom: 2rem;
-        padding: 1rem;
-        background-color: white;
-        border: 1px solid var(--border-color);
+        display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 2rem;
+        padding: 1rem; background-color: white; border: 1px solid var(--border-color);
         border-radius: 0.5rem;
     }
-
     .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: var(--text-secondary);
-        font-size: 0.9rem;
+        display: flex; align-items: center; gap: 0.5rem;
+        color: var(--text-secondary); font-size: 0.9rem;
     }
-
-    .legend-color {
-        width: 1rem;
-        height: 1rem;
-        border-radius: 0.25rem;
-    }
-
+    .legend-color { width: 1rem; height: 1rem; border-radius: 0.25rem; }
     .legend-color.booked {
-        background-color: white;
-        border: 1px solid var(--accent);
-        border-left: 4px solid var(--accent);
+        background-color: white; border: 1px solid var(--accent); border-left: 4px solid var(--accent);
     }
-
-    .legend-color.free {
-        background-color: var(--bg-light);
-        border: 2px dashed var(--border-color);
-    }
-
-    /* Фильтр */
+    .legend-color.free { background-color: var(--bg-light); border: 2px dashed var(--border-color); }
     .filter-select {
-        border: 1px solid var(--border-color);
-        border-radius: 0.375rem;
-        padding: 0.5rem;
-        color: var(--text-primary);
+        border: 1px solid var(--border-color); border-radius: 0.375rem;
+        padding: 0.5rem; color: var(--text-primary);
     }
-
     .filter-select:focus {
-        border-color: var(--accent);
-        outline: none;
+        border-color: var(--accent); outline: none;
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
-
-    /* Пустое состояние */
     .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        background-color: white;
-        border: 1px solid var(--border-color);
-        border-radius: 0.5rem;
+        text-align: center; padding: 4rem 2rem; background-color: white;
+        border: 1px solid var(--border-color); border-radius: 0.5rem;
     }
-
-    .empty-state i {
-        font-size: 4rem;
-        color: var(--text-secondary);
-        margin-bottom: 1rem;
-    }
-
-    .empty-state h5 {
-        color: var(--text-primary);
-        margin-bottom: 0.5rem;
-    }
-
-    .empty-state p {
-        color: var(--text-secondary);
-        margin-bottom: 1.5rem;
-    }
-
-    /* Заголовок таблицы */
-    .room-header {
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 0.25rem;
-    }
-
-    .room-capacity {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-        font-weight: normal;
-    }
-
-    /* Адаптивность */
+    .empty-state i { font-size: 4rem; color: var(--text-secondary); margin-bottom: 1rem; }
+    .empty-state h5 { color: var(--text-primary); margin-bottom: 0.5rem; }
+    .empty-state p { color: var(--text-secondary); margin-bottom: 1.5rem; }
+    .room-header { font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem; }
+    .room-capacity { font-size: 0.8rem; color: var(--text-secondary); font-weight: normal; }
     @media (max-width: 768px) {
-        .working-hours {
-            flex-direction: column;
-            text-align: center;
-        }
-
-        .legend {
-            gap: 1rem;
-        }
-
-        .date-navigator {
-            gap: 0.25rem;
-        }
-
-        .date-btn {
-            padding: 0.35rem 0.75rem;
-            font-size: 0.85rem;
-        }
+        .working-hours { flex-direction: column; text-align: center; }
+        .legend { gap: 1rem; }
+        .date-navigator { gap: 0.25rem; }
+        .date-btn { padding: 0.35rem 0.75rem; font-size: 0.85rem; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Заголовок -->
 <div class="row mb-4">
     <div class="col-12">
         <h2 class="fw-semibold">
@@ -338,7 +132,6 @@
     </div>
 </div>
 
-<!-- Информация о рабочем времени -->
 <div class="working-hours">
     <i class="bi bi-clock-history"></i>
     <div class="flex-grow-1">
@@ -348,42 +141,27 @@
     <span class="badge bg-success">Рабочее время</span>
 </div>
 
-<!-- Легенда -->
 <div class="legend">
-    <div class="legend-item">
-        <div class="legend-color booked"></div>
-        <span>Занято</span>
-    </div>
-    <div class="legend-item">
-        <div class="legend-color free"></div>
-        <span>Свободно</span>
-    </div>
+    <div class="legend-item"><div class="legend-color booked"></div><span>Занято</span></div>
+    <div class="legend-item"><div class="legend-color free"></div><span>Свободно</span></div>
 </div>
 
-<!-- Навигация по датам -->
 <div class="date-navigator">
-    <a href="?date={{ prev_date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}"
-       class="date-btn">
+    <a href="?date={{ prev_date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}" class="date-btn">
         <i class="bi bi-chevron-left"></i>
     </a>
-
     {% for d in dates %}
         <a href="?date={{ d.date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}"
            class="date-btn {% if d.is_selected %}active{% endif %}">
             {{ d.display }}
-            {% if d.is_today %}
-                <span class="badge bg-primary ms-1">сегодня</span>
-            {% endif %}
+            {% if d.is_today %}<span class="badge bg-primary ms-1">сегодня</span>{% endif %}
         </a>
     {% endfor %}
-
-    <a href="?date={{ next_date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}"
-       class="date-btn">
+    <a href="?date={{ next_date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}" class="date-btn">
         <i class="bi bi-chevron-right"></i>
     </a>
 </div>
 
-<!-- Фильтр и действия -->
 <div class="row mb-4 align-items-end">
     <div class="col-md-6">
         <label for="roomFilter" class="form-label fw-medium">Фильтр по залу</label>
@@ -399,20 +177,17 @@
     <div class="col-md-6 text-md-end mt-3 mt-md-0">
         <a href="{% url 'bookings:schedule' %}?date={{ selected_date|date:'Y-m-d' }}"
            class="btn btn-outline-secondary me-2">
-            <i class="bi bi-arrow-repeat me-1"></i>
-            Сбросить
+            <i class="bi bi-arrow-repeat me-1"></i> Сбросить
         </a>
         {% if user_role == 'employee' or user_role == 'requester' %}
             <a href="{% url 'bookings:export_schedule' %}?date={{ selected_date|date:'Y-m-d' }}"
                class="btn btn-outline-success">
-                <i class="bi bi-download me-1"></i>
-                Экспорт
+                <i class="bi bi-download me-1"></i> Экспорт
             </a>
         {% endif %}
     </div>
 </div>
 
-<!-- Расписание -->
 <div class="card border-0">
     <div class="card-header bg-white border py-3">
         <div class="d-flex justify-content-between align-items-center">
@@ -421,9 +196,7 @@
                 {{ selected_date|date:"d E Y" }}
                 {% if room_id %}
                     {% for room in rooms %}
-                        {% if room.id == room_id %}
-                            — {{ room.name }}
-                        {% endif %}
+                        {% if room.id == room_id %}— {{ room.name }}{% endif %}
                     {% endfor %}
                 {% endif %}
             </h5>
@@ -441,8 +214,7 @@
                 <p>На {{ selected_date|date:"d.m.Y" }} нет подтвержденных бронирований</p>
                 {% if user_role == 'requester' %}
                     <a href="{% url 'bookings:create_booking' %}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-2"></i>
-                        Создать заявку
+                        <i class="bi bi-plus-circle me-2"></i> Создать заявку
                     </a>
                 {% endif %}
             </div>
@@ -501,8 +273,7 @@
                                                        class="d-block">
                                                         <div class="free-text">Свободно</div>
                                                         <span class="book-now-btn">
-                                                            <i class="bi bi-plus-circle me-1"></i>
-                                                            Забронировать
+                                                            <i class="bi bi-plus-circle me-1"></i> Забронировать
                                                         </span>
                                                     </a>
                                                 {% else %}
@@ -524,11 +295,8 @@
 <script>
     function filterByRoom(roomId) {
         let url = new URL(window.location.href);
-        if (roomId) {
-            url.searchParams.set('room', roomId);
-        } else {
-            url.searchParams.delete('room');
-        }
+        if (roomId) { url.searchParams.set('room', roomId); }
+        else { url.searchParams.delete('room'); }
         window.location.href = url.toString();
     }
 </script>
