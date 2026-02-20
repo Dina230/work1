@@ -165,7 +165,7 @@
                 </span>
                 <span class="rule-badge">
                     <i class="bi bi-hourglass-top"></i>
-                    Макс. {{ booking_settings.MAX_BOOKING_DURATION|divisibleby:60 }} ч
+                    Макс. {% widthratio booking_settings.MAX_BOOKING_DURATION 60 1 %} ч
                 </span>
             </div>
         </div>
@@ -343,9 +343,9 @@
                     <i class="bi bi-clock me-2 text-primary"></i>
                     Мин. время: {{ booking_settings.MIN_BOOKING_DURATION }} мин
                 </li>
-                <li class="d-flex align-items-center">
-                    <i class="bi bi-clock-history me-2 text-primary"></i>
-                    Макс. время: {{ booking_settings.MAX_BOOKING_DURATION|divisibleby:60 }} ч
+                <li>
+                    <i class="bi bi-clock"></i>
+                    Макс. время: {% widthratio booking_settings.MAX_BOOKING_DURATION 60 1 %} ч
                 </li>
                 <li class="d-flex align-items-center">
                     <i class="bi bi-calendar-range me-2 text-primary"></i>

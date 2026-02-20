@@ -110,14 +110,6 @@
     }
     .legend-color.free { background-color: var(--bg-light); border: 2px dashed var(--border-color); }
     .legend-color.past { background-color: #f1f5f9; border: 2px solid #cbd5e1; }
-    .filter-select {
-        border: 1px solid var(--border-color); border-radius: 0.375rem;
-        padding: 0.5rem; color: var(--text-primary);
-    }
-    .filter-select:focus {
-        border-color: var(--accent); outline: none;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
     .empty-state {
         text-align: center; padding: 4rem 2rem; background-color: white;
         border: 1px solid var(--border-color); border-radius: 0.5rem;
@@ -162,43 +154,30 @@
     <div class="legend-item"><div class="legend-color past"></div><span>Прошедшее время</span></div>
 </div>
 
+<!-- Навигация по датам -->
 <div class="date-navigator">
-    <a href="?date={{ prev_date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}" class="date-btn">
+    <a href="?date={{ prev_date|date:'Y-m-d' }}" class="date-btn">
         <i class="bi bi-chevron-left"></i>
     </a>
     {% for d in dates %}
-        <a href="?date={{ d.date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}"
+        <a href="?date={{ d.date|date:'Y-m-d' }}"
            class="date-btn {% if d.is_selected %}active{% endif %}">
             {{ d.display }}
             {% if d.is_today %}<span class="badge bg-primary ms-1">сегодня</span>{% endif %}
         </a>
     {% endfor %}
-    <a href="?date={{ next_date|date:'Y-m-d' }}{% if room_id %}&room={{ room_id }}{% endif %}" class="date-btn">
+    <a href="?date={{ next_date|date:'Y-m-d' }}" class="date-btn">
         <i class="bi bi-chevron-right"></i>
     </a>
 </div>
 
-<div class="row mb-4 align-items-end">
-    <div class="col-md-6">
-        <label for="roomFilter" class="form-label fw-medium">Фильтр по залу</label>
-        <select class="form-select filter-select" id="roomFilter" onchange="filterByRoom(this.value)">
-            <option value="">Все залы</option>
-            {% for room in rooms %}
-                <option value="{{ room.id }}" {% if room_id == room.id %}selected{% endif %}>
-                    {{ room.name }} ({{ room.capacity }} чел.)
-                </option>
-            {% endfor %}
-        </select>
-    </div>
-    <div class="col-md-6 text-md-end mt-3 mt-md-0">
-        <a href="{% url 'bookings:schedule' %}?date={{ selected_date|date:'Y-m-d' }}"
-           class="btn btn-outline-secondary me-2">
-            <i class="bi bi-arrow-repeat me-1"></i> Сбросить
-        </a>
+<!-- Кнопка экспорта (только для сотрудников и заявителей) -->
+<div class="row mb-4">
+    <div class="col-12 text-end">
         {% if user_role == 'employee' or user_role == 'requester' %}
             <a href="{% url 'bookings:export_schedule' %}?date={{ selected_date|date:'Y-m-d' }}"
                class="btn btn-outline-success">
-                <i class="bi bi-download me-1"></i> Экспорт
+                <i class="bi bi-download me-1"></i> Экспорт CSV
             </a>
         {% endif %}
     </div>
@@ -210,11 +189,6 @@
             <h5 class="fw-semibold mb-0">
                 <i class="bi bi-calendar-day text-primary me-2"></i>
                 {{ selected_date|date:"d E Y" }}
-                {% if room_id %}
-                    {% for room in rooms %}
-                        {% if room.id == room_id %}— {{ room.name }}{% endif %}
-                    {% endfor %}
-                {% endif %}
             </h5>
             <span class="badge bg-light text-dark">
                 {{ total_bookings }}
@@ -223,7 +197,7 @@
         </div>
     </div>
     <div class="card-body p-0">
-        {% if total_bookings == 0 and not room_id %}
+        {% if total_bookings == 0 %}
             <div class="empty-state">
                 <i class="bi bi-calendar-x"></i>
                 <h5>Нет бронирований</h5>
@@ -240,23 +214,12 @@
                     <thead>
                         <tr>
                             <th class="time-slot">Время</th>
-                            {% if not room_id %}
-                                {% for room in rooms %}
-                                    <th>
-                                        <div class="room-header">{{ room.name }}</div>
-                                        <div class="room-capacity">{{ room.capacity }} чел.</div>
-                                    </th>
-                                {% endfor %}
-                            {% else %}
-                                {% for room in rooms %}
-                                    {% if room.id == room_id %}
-                                        <th>
-                                            <div class="room-header">{{ room.name }}</div>
-                                            <div class="room-capacity">{{ room.capacity }} чел.</div>
-                                        </th>
-                                    {% endif %}
-                                {% endfor %}
-                            {% endif %}
+                            {% for room in rooms %}
+                                <th>
+                                    <div class="room-header">{{ room.name }}</div>
+                                    <div class="room-capacity">{{ room.capacity }} чел.</div>
+                                </th>
+                            {% endfor %}
                         </tr>
                     </thead>
                     <tbody>
@@ -315,13 +278,4 @@
         {% endif %}
     </div>
 </div>
-
-<script>
-    function filterByRoom(roomId) {
-        let url = new URL(window.location.href);
-        if (roomId) { url.searchParams.set('room', roomId); }
-        else { url.searchParams.delete('room'); }
-        window.location.href = url.toString();
-    }
-</script>
 {% endblock %}
