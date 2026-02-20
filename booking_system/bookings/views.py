@@ -467,7 +467,8 @@ def user_management(request):
 def create_user(request):
     """Создание нового пользователя модератором"""
     if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
+        # 🔥 ДОБАВЛЕНО: request.FILES для загрузки аватара
+        form = UserRegistrationForm(request.POST, request.FILES)
         if form.is_valid():
             try:
                 user = form.save()
@@ -481,7 +482,10 @@ def create_user(request):
                     messages.error(request, error)
     else:
         form = UserRegistrationForm()
-    return render(request, 'bookings/user_create.html', {'form': form, 'title': 'Создание нового пользователя'})
+    return render(request, 'bookings/user_create.html', {
+        'form': form,
+        'title': 'Создание нового пользователя'
+    })
 
 
 @moderator_required
@@ -489,7 +493,7 @@ def edit_user(request, user_id):
     """Редактирование пользователя"""
     user = get_object_or_404(User, id=user_id)
     if request.method == 'POST':
-        # 🔥 ВАЖНО: добавлен request.FILES для загрузки аватара
+        # 🔥 ДОБАВЛЕНО: request.FILES для загрузки аватара
         form = UserEditForm(request.POST, request.FILES, instance=user)
         if form.is_valid():
             form.save()
@@ -508,7 +512,9 @@ def edit_user(request, user_id):
         'rejected_bookings': Booking.objects.filter(requester=user, status='rejected').count(),
     }
     return render(request, 'bookings/user_form.html', {
-        'form': form, 'edit_user': user, 'stats': user_stats
+        'form': form,
+        'edit_user': user,
+        'stats': user_stats
     })
 
 
@@ -570,7 +576,7 @@ def schedule(request):
         local_start = timezone.localtime(booking.start_time)
         local_end = timezone.localtime(booking.end_time)
 
-        booking_hour = local_start.hour  # ✅ Теперь это локальный час
+        booking_hour = local_start.hour  # ✅ Теперь это локальный час (не UTC!)
         booking_room_id = booking.room.id
 
         if 7 <= booking_hour <= 16:
@@ -654,7 +660,7 @@ def room_schedule(request, room_id):
 
 @any_role_required
 def export_schedule(request):
-    """Экспорт расписания в CSV"""
+    """Экспорт расписания в CSV с правильной кодировкой"""
     selected_date_param = request.GET.get('date')
     if selected_date_param:
         try:
@@ -663,22 +669,40 @@ def export_schedule(request):
             selected_date_obj = timezone.now().date()
     else:
         selected_date_obj = timezone.now().date()
+
     day_start = timezone.make_aware(datetime.combine(selected_date_obj, datetime.min.time()))
     day_end = timezone.make_aware(datetime.combine(selected_date_obj, datetime.max.time()))
+
     bookings = Booking.objects.filter(
-        status='approved', start_time__gte=day_start, start_time__lte=day_end
+        status='approved',
+        start_time__gte=day_start,
+        start_time__lte=day_end
     ).select_related('room', 'requester').order_by('room__name', 'start_time')
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="schedule_{selected_date_obj.strftime("%Y%m%d")}.csv"'
-    writer = csv.writer(response)
+
+    # 🔥 Создаём CSV с BOM-меткой для правильной кодировки в Excel
+    import io
+    output = io.StringIO()
+
+    # 🔥 Добавляем BOM-метку для UTF-8 (чтобы Excel понимал кириллицу)
+    output.write('\ufeff')
+
+    writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
     writer.writerow(['Зал', 'Мероприятие', 'Организатор', 'Начало', 'Окончание', 'Участников'])
+
     for booking in bookings:
         local_start = timezone.localtime(booking.start_time)
         local_end = timezone.localtime(booking.end_time)
         writer.writerow([
-            booking.room.name, booking.title,
+            booking.room.name,
+            booking.title,
             booking.requester.get_full_name() or booking.requester.username,
-            local_start.strftime('%H:%M'), local_end.strftime('%H:%M'),
+            local_start.strftime('%H:%M'),
+            local_end.strftime('%H:%M'),
             booking.participants_count
         ])
+
+    # 🔥 Создаём HttpResponse с правильной кодировкой
+    response = HttpResponse(output.getvalue(), content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="schedule_{selected_date_obj.strftime("%Y%m%d")}.csv"'
+
     return response
