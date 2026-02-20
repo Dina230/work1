@@ -613,7 +613,7 @@ def schedule(request):
     else:
         selected_date_obj = timezone.now().date()
 
-    # Границы дня в UTC для фильтрации в БД
+    # Границы дня в локальном времени
     day_start = timezone.make_aware(datetime.combine(selected_date_obj, datetime.min.time()))
     day_end = timezone.make_aware(datetime.combine(selected_date_obj, datetime.max.time()))
 
@@ -636,20 +636,34 @@ def schedule(request):
             calendar_data[key] = []
 
     for booking in bookings:
+        # Конвертируем в локальное время
         local_start = timezone.localtime(booking.start_time)
         local_end = timezone.localtime(booking.end_time)
 
+        # Получаем час начала в локальном времени
         booking_hour = local_start.hour
         booking_room_id = booking.room.id
 
-        if 7 <= booking_hour <= 16:
-            key = (booking_hour, booking_room_id)
-            if key in calendar_data:
-                calendar_data[key].append({
-                    'booking': booking,
-                    'local_start': local_start,
-                    'local_end': local_end,
-                })
+        # Добавляем бронирование во все часы, которые оно занимает
+        current_hour = local_start.hour
+        end_hour = local_end.hour
+
+        # Если бронирование заканчивается в 00 минут, не включаем последний час
+        if local_end.minute == 0 and end_hour > 0:
+            end_hour -= 1
+
+        while current_hour <= end_hour and current_hour < 17:
+            if 7 <= current_hour <= 16:
+                key = (current_hour, booking_room_id)
+                if key in calendar_data:
+                    # Проверяем, не добавлено ли уже это бронирование
+                    if not any(b['booking'].id == booking.id for b in calendar_data[key]):
+                        calendar_data[key].append({
+                            'booking': booking,
+                            'local_start': local_start,
+                            'local_end': local_end,
+                        })
+            current_hour += 1
 
     # Формирование timeline для шаблона
     timeline = []
@@ -658,6 +672,7 @@ def schedule(request):
     for hour in range(7, 17):
         slot_label = "16:00" if hour == 16 else f"{hour:02d}:00"
 
+        # Проверяем, прошёл ли этот час
         slot_datetime = timezone.make_aware(
             datetime.combine(selected_date_obj, datetime.min.time()) + timedelta(hours=hour))
         is_past = slot_datetime < now
