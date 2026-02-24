@@ -233,35 +233,63 @@ def create_booking(request):
 
 @requester_required
 def my_bookings(request):
-    """Список бронирований текущего пользователя"""
+    """Список бронирований текущего пользователя с пагинацией"""
+    # Получаем параметры фильтрации
     status_filter = request.GET.get('status', 'all')
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
-    bookings = Booking.objects.filter(requester=request.user)
+
+    # Базовый запрос
+    bookings_list = Booking.objects.filter(requester=request.user)
+
+    # Применяем фильтры
     if status_filter != 'all':
-        bookings = bookings.filter(status=status_filter)
+        bookings_list = bookings_list.filter(status=status_filter)
+
     if date_from:
         try:
-            date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
-            bookings = bookings.filter(start_time__date__gte=date_from)
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+            bookings_list = bookings_list.filter(start_time__date__gte=date_from_obj)
         except ValueError:
             pass
+
     if date_to:
         try:
-            date_to = datetime.strptime(date_to, '%Y-%m-%d').date()
-            bookings = bookings.filter(end_time__date__lte=date_to)
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+            bookings_list = bookings_list.filter(end_time__date__lte=date_to_obj)
         except ValueError:
             pass
-    bookings = bookings.order_by('-created_at')
+
+    # Сортировка
+    bookings_list = bookings_list.order_by('-created_at')
+
+    # Статистика (до пагинации)
     stats = {
-        'total': bookings.count(),
-        'pending': bookings.filter(status='pending').count(),
-        'approved': bookings.filter(status='approved').count(),
-        'rejected': bookings.filter(status='rejected').count(),
-        'cancelled': bookings.filter(status='cancelled').count(),
+        'total': bookings_list.count(),
+        'pending': bookings_list.filter(status='pending').count(),
+        'approved': bookings_list.filter(status='approved').count(),
+        'rejected': bookings_list.filter(status='rejected').count(),
+        'cancelled': bookings_list.filter(status='cancelled').count(),
     }
+
+    # Пагинация: 10 записей на странице
+    page = request.GET.get('page', 1)
+    paginator = Paginator(bookings_list, 10)
+
+    try:
+        bookings = paginator.page(page)
+    except PageNotAnInteger:
+        # Если page не число, показываем первую страницу
+        bookings = paginator.page(1)
+    except EmptyPage:
+        # Если page вне диапазона, показываем последнюю страницу
+        bookings = paginator.page(paginator.num_pages)
+
     return render(request, 'bookings/booking_list.html', {
-        'bookings': bookings, 'stats': stats, 'status_filter': status_filter, 'now': timezone.now(),
+        'bookings': bookings,  # Это теперь объект Page с пагинацией
+        'stats': stats,
+        'status_filter': status_filter,
+        'now': timezone.now(),
     })
 
 
@@ -471,24 +499,31 @@ def delete_room(request, room_id):
 
 @moderator_required
 def user_management(request):
-    """Управление пользователями"""
+    """Управление пользователями с пагинацией"""
     users = User.objects.all().order_by('-date_joined')
+
+    # Фильтры
     role_filter = request.GET.get('role', 'all')
     active_filter = request.GET.get('active', 'all')
+
     if role_filter != 'all':
         users = users.filter(role=role_filter)
     if active_filter == 'active':
         users = users.filter(is_active=True)
     elif active_filter == 'inactive':
         users = users.filter(is_active=False)
+
+    # Пагинация: 20 пользователей на странице
     page = request.GET.get('page', 1)
     paginator = Paginator(users, 20)
+
     try:
-        users = paginator.page(page)
+        users_page = paginator.page(page)
     except PageNotAnInteger:
-        users = paginator.page(1)
+        users_page = paginator.page(1)
     except EmptyPage:
-        users = paginator.page(paginator.num_pages)
+        users_page = paginator.page(paginator.num_pages)
+
     today = timezone.now().date()
     stats = {
         'total': User.objects.count(),
@@ -498,8 +533,12 @@ def user_management(request):
         'active': User.objects.filter(is_active=True).count(),
         'new_today': User.objects.filter(date_joined__date=today).count(),
     }
+
     return render(request, 'bookings/user_management.html', {
-        'users': users, 'stats': stats, 'role_filter': role_filter, 'active_filter': active_filter
+        'users': users_page,  # Объект Page с пагинацией
+        'stats': stats,
+        'role_filter': role_filter,
+        'active_filter': active_filter
     })
 
 
